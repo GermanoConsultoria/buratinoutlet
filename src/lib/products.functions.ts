@@ -15,14 +15,28 @@ const productInput = z.object({
 export const listProducts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("products")
-      .select("id, name, sku, price, cost, category, subcategory, created_at")
-      .order("name");
-    if (error) throw new Error(error.message);
-    return data ?? [];
-  });
+    const pageSize = 1000;
+    let all: any[] = [];
+    let from = 0;
 
+    while (true) {
+      const { data, error } = await context.supabase
+        .from("products")
+        .select("id, name, sku, price, cost, category, subcategory, created_at")
+        .order("name")
+        .range(from, from + pageSize - 1);
+
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) break;
+
+      all = all.concat(data);
+
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+
+    return all;
+  });
 export const upsertProduct = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => productInput.parse(d))
