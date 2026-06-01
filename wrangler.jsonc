@@ -1,10 +1,13 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
   "name": "buratinoutlet",
   "compatibility_date": "2026-06-01",
   "compatibility_flags": ["nodejs_compat"],
   "observability": {
     "enabled": true
+  },
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS"
   },
   "vars": {
     "SUPABASE_URL": "https://rhoztlwuleftdcjmwwfy.supabase.co",
