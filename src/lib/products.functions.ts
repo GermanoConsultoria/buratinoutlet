@@ -85,3 +85,14 @@ export const bulkImportProducts = createServerFn({ method: "POST" })
     }
     return { ok: true, count };
   });
+
+  export const deleteAllProducts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { error } = await context.supabase
+      .from("products")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000");
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

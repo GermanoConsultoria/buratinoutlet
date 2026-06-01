@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useRef } from "react";
-import { listProducts, upsertProduct, deleteProduct, bulkImportProducts } from "@/lib/products.functions";
+import { listProducts, upsertProduct, deleteProduct, bulkImportProducts, deleteAllProducts } from "@/lib/products.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,7 @@ function ProdutosPage() {
   const upsert = useServerFn(upsertProduct);
   const del = useServerFn(deleteProduct);
   const bulk = useServerFn(bulkImportProducts);
+  const deleteAll = useServerFn(deleteAllProducts);
   const qc = useQueryClient();
 
   const { data: products = [], isLoading } = useQuery({
@@ -39,6 +40,7 @@ function ProdutosPage() {
   const [price, setPrice] = useState("");
   const [search, setSearch] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("TODAS");
+  const [deletingAll, setDeletingAll] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const xlsxRef = useRef<HTMLInputElement>(null);
 
@@ -68,6 +70,20 @@ function ProdutosPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const handleDeleteAll = async () => {
+    if (!confirm(`Excluir todos os ${products.length} produtos? Esta ação não pode ser desfeita.`)) return;
+    setDeletingAll(true);
+    try {
+      await deleteAll();
+      toast.success("Todos os produtos foram excluídos.");
+      qc.invalidateQueries({ queryKey: ["products"] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setDeletingAll(false);
+    }
+  };
 
   const openNew = () => {
     setEditing(null);
@@ -197,7 +213,16 @@ function ProdutosPage() {
             )}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            className="text-destructive border-destructive hover:bg-destructive hover:text-white"
+            onClick={handleDeleteAll}
+            disabled={deletingAll || products.length === 0}
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            {deletingAll ? "Excluindo..." : "Limpar tudo"}
+          </Button>
           <input
             ref={fileRef}
             type="file"
