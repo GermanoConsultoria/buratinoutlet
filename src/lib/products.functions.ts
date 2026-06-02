@@ -10,6 +10,9 @@ const productInput = z.object({
   cost: z.number().nonnegative().optional(),
   category: z.string().max(120).nullable().optional(),
   subcategory: z.string().max(120).nullable().optional(),
+  lote: z.string().max(60).nullable().optional(),
+  data_entrada: z.string().nullable().optional(),
+  endereco: z.string().max(300).nullable().optional(),
 });
 
 export const listProducts = createServerFn({ method: "GET" })
@@ -22,7 +25,7 @@ export const listProducts = createServerFn({ method: "GET" })
     while (true) {
       const { data, error } = await context.supabase
         .from("products")
-        .select("id, name, sku, price, cost, category, subcategory, created_at")
+        .select("id, name, sku, price, cost, category, subcategory, lote, data_entrada, endereco, created_at")
         .order("name")
         .range(from, from + pageSize - 1);
 
@@ -30,13 +33,13 @@ export const listProducts = createServerFn({ method: "GET" })
       if (!data || data.length === 0) break;
 
       all = all.concat(data);
-
       if (data.length < pageSize) break;
       from += pageSize;
     }
 
     return all;
   });
+
 export const upsertProduct = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => productInput.parse(d))
@@ -48,6 +51,9 @@ export const upsertProduct = createServerFn({ method: "POST" })
       cost: data.cost ?? 0,
       category: data.category?.trim() || null,
       subcategory: data.subcategory?.trim() || null,
+      lote: data.lote?.trim() || null,
+      data_entrada: data.data_entrada ?? null,
+      endereco: data.endereco?.trim() || null,
       updated_at: new Date().toISOString(),
     };
     if (data.id) {
@@ -76,6 +82,7 @@ export const bulkImportProducts = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     z.object({
       items: z.array(productInput.omit({ id: true })).min(1).max(10000),
+      lote: z.string().max(60).nullable().optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -86,9 +93,12 @@ export const bulkImportProducts = createServerFn({ method: "POST" })
       cost: i.cost ?? 0,
       category: i.category?.trim() || null,
       subcategory: i.subcategory?.trim() || null,
+      lote: data.lote?.trim() || i.lote?.trim() || null,
+      data_entrada: i.data_entrada ?? new Date().toISOString(),
+      endereco: i.endereco?.trim() || null,
       created_by: context.userId,
     }));
-    // chunk insert to avoid payload limits
+
     const chunk = 500;
     let count = 0;
     for (let i = 0; i < rows.length; i += chunk) {
@@ -100,7 +110,7 @@ export const bulkImportProducts = createServerFn({ method: "POST" })
     return { ok: true, count };
   });
 
-  export const deleteAllProducts = createServerFn({ method: "POST" })
+export const deleteAllProducts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { error } = await context.supabase

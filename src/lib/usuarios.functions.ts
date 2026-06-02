@@ -12,6 +12,15 @@ function getServiceClient() {
   });
 }
 
+const modulosValidos = z.array(z.enum([
+  "pdv",
+  "historico_vendas",
+  "vendas",
+  "produtos",
+  "financeiro",
+  "configuracoes",
+]));
+
 export const listUsuarios = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -32,6 +41,7 @@ export const criarUsuario = createServerFn({ method: "POST" })
       cargo: z.string().max(100).optional(),
       role: z.enum(["USER", "MANAGER", "OWNER"]).default("USER"),
       senha: z.string().min(6),
+      modulos: modulosValidos.default([]),
     }).parse(d)
   )
   .handler(async ({ data }) => {
@@ -53,6 +63,7 @@ export const criarUsuario = createServerFn({ method: "POST" })
         full_name: data.full_name,
         cargo: data.cargo ?? null,
         role: data.role,
+        modulos: data.modulos,
         updated_at: new Date().toISOString(),
       })
       .eq("id", user.user.id);
@@ -70,6 +81,7 @@ export const editarUsuario = createServerFn({ method: "POST" })
       full_name: z.string().min(1).max(200),
       cargo: z.string().max(100).nullable().optional(),
       role: z.enum(["USER", "MANAGER", "OWNER"]),
+      modulos: modulosValidos.default([]),
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
@@ -79,6 +91,7 @@ export const editarUsuario = createServerFn({ method: "POST" })
         full_name: data.full_name,
         cargo: data.cargo ?? null,
         role: data.role,
+        modulos: data.modulos,
         updated_at: new Date().toISOString(),
       })
       .eq("id", data.id);

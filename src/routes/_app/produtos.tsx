@@ -18,7 +18,18 @@ export const Route = createFileRoute("/_app/produtos")({
   component: ProdutosPage,
 });
 
-type Product = { id: string; name: string; sku: string | null; price: number };
+type Product = {
+  id: string;
+  name: string;
+  sku: string | null;
+  price: number;
+  cost?: number;
+  category?: string | null;
+  subcategory?: string | null;
+  lote?: string | null;
+  data_entrada?: string | null;
+  endereco?: string | null;
+};
 
 function ProdutosPage() {
   const list = useServerFn(listProducts);
@@ -38,9 +49,14 @@ function ProdutosPage() {
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
   const [price, setPrice] = useState("");
+  const [loteInput, setLoteInput] = useState("");
   const [search, setSearch] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("TODAS");
+  const [loteFiltro, setLoteFiltro] = useState("TODOS");
   const [deletingAll, setDeletingAll] = useState(false);
+  const [loteImport, setLoteImport] = useState("");
+  const [showLoteModal, setShowLoteModal] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const xlsxRef = useRef<HTMLInputElement>(null);
 
@@ -52,6 +68,7 @@ function ProdutosPage() {
           name,
           sku: sku || null,
           price: parseFloat(price.replace(",", ".")) || 0,
+          lote: loteInput || null,
         },
       }),
     onSuccess: () => {
@@ -87,7 +104,7 @@ function ProdutosPage() {
 
   const openNew = () => {
     setEditing(null);
-    setName(""); setSku(""); setPrice("");
+    setName(""); setSku(""); setPrice(""); setLoteInput("");
     setOpen(true);
   };
 
@@ -96,6 +113,7 @@ function ProdutosPage() {
     setName(p.name);
     setSku(p.sku ?? "");
     setPrice(String(p.price));
+    setLoteInput(p.lote ?? "");
     setOpen(true);
   };
 
@@ -131,30 +149,22 @@ function ProdutosPage() {
     }
   };
 
-  const handleXlsx = async (file: File) => {
+  const processXlsx = async (file: File, lote: string) => {
     try {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: "array", cellFormula: false });
       const ws = wb.Sheets[wb.SheetNames[0]];
       if (!ws) return toast.error("Planilha vazia");
       const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, {
-        header: 1,
-        defval: null,
-        raw: true,
+        header: 1, defval: null, raw: true,
       }) as (string | number | null)[][];
 
       let headerIdx = -1;
       for (let i = 0; i < Math.min(rows.length, 15); i++) {
         const colD = String(rows[i]?.[3] ?? "").toLowerCase();
         const colI = String(rows[i]?.[8] ?? "").toLowerCase();
-        if (
-          colD.includes("código") ||
-          colD.includes("codigo") ||
-          colD.includes("cod") ||
-          colI.includes("descri")
-        ) {
-          headerIdx = i;
-          break;
+        if (colD.includes("código") || colD.includes("codigo") || colD.includes("cod") || colI.includes("descri")) {
+          headerIdx = i; break;
         }
       }
 
@@ -162,19 +172,51 @@ function ProdutosPage() {
 
       const items = dataRows
         .map((r) => {
-          const sku         = r[3]  != null ? String(r[3]).trim()  : "";
-          const name        = r[8]  != null ? String(r[8]).trim()  : "";
-          const cost        = typeof r[12] === "number" ? r[12] : 0;
-          const price       = typeof r[13] === "number" ? r[13] : 0;
-          const category    = r[14] != null ? String(r[14]).trim() : null;
-          const subcategory = r[15] != null ? String(r[15]).trim() : null;
-          return { sku: sku || null, name, cost, price, category, subcategory };
+          const sku         = r[3]  != null ? String(r[3]).trim()  : "";   // D - Código ML
+          const name        = r[8]  != null ? String(r[8]).trim()  : "";   // I - Descrição do item
+          const cost        = typeof r[12] === "number" ? r[12] : 0;       // M - Custo
+          const price       = typeof r[13] === "number" ? r[13] : 0;       // N - Venda
+          const category    = r[14] != null ? String(r[14]).trim() : null; // O - Categoria
+          const subcategory = r[15] != null ? String(r[15]).trim() : null; // P - Subcategoria
+          const loteCol     = r[16] != null ? String(r[16]).trim() : null; // Q - Lote
+          const endereco    = r[17] != null ? String(r[17]).trim() : null; // R - Cidade
+          const dataEntrada = r[18] != null ? String(r[18]).trim() : null; // S - Data de entrada
+
+          let dataEntradaISO: string | null = null;
+          if (dataEntrada) {
+            const num = Number(dataEntrada);
+            if (!isNaN(num) && num > 10000) {
+              const dt = (XLSX.SSF as any).parse_date_code(num);
+              if (dt) {
+                dataEntradaISO = `${dt.y}-${String(dt.m).padStart(2, "0")}-${String(dt.d).padStart(2, "0")}T00:00:00.000Z`;
+              }
+            } else {
+              const partes = dataEntrada.split("/");
+              if (partes.length === 3) {
+                dataEntradaISO = `${partes[2]}-${partes[1].padStart(2, "0")}-${partes[0].padStart(2, "0")}T00:00:00.000Z`;
+              } else {
+                const d = new Date(dataEntrada);
+                if (!isNaN(d.getTime())) dataEntradaISO = d.toISOString();
+              }
+            }
+          }
+
+          return {
+            sku: sku || null,
+            name,
+            cost,
+            price,
+            category,
+            subcategory,
+            lote: loteCol || lote || null,
+            endereco,
+            data_entrada: dataEntradaISO,
+          };
         })
         .filter((i) => i.name && i.price > 0);
 
       if (!items.length) return toast.error("Nenhum produto válido na planilha");
-
-      const res = await bulk({ data: { items } });
+      const res = await bulk({ data: { items, lote: lote || null } });
       toast.success(`${res.count} produtos importados da planilha`);
       qc.invalidateQueries({ queryKey: ["products"] });
     } catch (e) {
@@ -182,17 +224,18 @@ function ProdutosPage() {
     }
   };
 
-  const categorias = [...new Set(
-    products.map((p) => (p as any).category).filter(Boolean)
-  )].sort() as string[];
+  const handleXlsxClick = () => xlsxRef.current?.click();
 
-  const filtered = products.filter((p) => {
+  const categorias = [...new Set(products.map((p) => (p as any).category).filter(Boolean))].sort() as string[];
+  const lotes = [...new Set(products.map((p) => (p as any).lote).filter(Boolean))].sort() as string[];
+
+  const filtered = products.filter((p: any) => {
     const matchSearch =
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       (p.sku ?? "").toLowerCase().includes(search.toLowerCase());
-    const matchCategoria =
-      categoriaFiltro === "TODAS" || (p as any).category === categoriaFiltro;
-    return matchSearch && matchCategoria;
+    const matchCategoria = categoriaFiltro === "TODAS" || p.category === categoriaFiltro;
+    const matchLote = loteFiltro === "TODOS" || p.lote === loteFiltro;
+    return matchSearch && matchCategoria && matchLote;
   });
 
   return (
@@ -223,32 +266,21 @@ function ProdutosPage() {
             <Trash2 className="h-4 w-4 mr-1" />
             {deletingAll ? "Excluindo..." : "Limpar tudo"}
           </Button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) handleCsv(f);
-              e.target.value = "";
-            }}
-          />
+          <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCsv(f); e.target.value = ""; }} />
           <Button variant="outline" onClick={() => fileRef.current?.click()}>
             <Upload className="h-4 w-4 mr-1" /> Importar CSV
           </Button>
-          <input
-            ref={xlsxRef}
-            type="file"
+          <input ref={xlsxRef} type="file"
             accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) handleXlsx(f);
+              if (f) { setPendingFile(f); setLoteImport(""); setShowLoteModal(true); }
               e.target.value = "";
             }}
           />
-          <Button variant="outline" onClick={() => xlsxRef.current?.click()}>
+          <Button variant="outline" onClick={handleXlsxClick}>
             <FileSpreadsheet className="h-4 w-4 mr-1" /> Importar Planilha
           </Button>
           <Dialog open={open} onOpenChange={setOpen}>
@@ -272,19 +304,16 @@ function ProdutosPage() {
                 </div>
                 <div>
                   <Label>Preço (R$) *</Label>
-                  <Input
-                    inputMode="decimal"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="0,00"
-                  />
+                  <Input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0,00" />
+                </div>
+                <div>
+                  <Label>Lote</Label>
+                  <Input value={loteInput} onChange={(e) => setLoteInput(e.target.value)} placeholder="Ex: Lote 92" />
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-                <Button onClick={() => saveMut.mutate()} disabled={!name || saveMut.isPending}>
-                  Salvar
-                </Button>
+                <Button onClick={() => saveMut.mutate()} disabled={!name || saveMut.isPending}>Salvar</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -299,24 +328,21 @@ function ProdutosPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-sm"
           />
-          <select
-            value={categoriaFiltro}
-            onChange={(e) => setCategoriaFiltro(e.target.value)}
-            className="border rounded-md px-3 py-2 text-sm bg-background"
-          >
+          <select value={categoriaFiltro} onChange={(e) => setCategoriaFiltro(e.target.value)}
+            className="border rounded-md px-3 py-2 text-sm bg-background">
             <option value="TODAS">Todas as categorias ({categorias.length})</option>
-            {categorias.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
+            {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
-          {categoriaFiltro !== "TODAS" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setCategoriaFiltro("TODAS")}
-              className="text-muted-foreground"
-            >
-              Limpar filtro ×
+          <select value={loteFiltro} onChange={(e) => setLoteFiltro(e.target.value)}
+            className="border rounded-md px-3 py-2 text-sm bg-background">
+            <option value="TODOS">Todos os lotes ({lotes.length})</option>
+            {lotes.map((l) => <option key={l} value={l}>{l}</option>)}
+          </select>
+          {(categoriaFiltro !== "TODAS" || loteFiltro !== "TODOS") && (
+            <Button variant="ghost" size="sm"
+              onClick={() => { setCategoriaFiltro("TODAS"); setLoteFiltro("TODOS"); }}
+              className="text-muted-foreground">
+              Limpar filtros ×
             </Button>
           )}
         </div>
@@ -328,6 +354,9 @@ function ProdutosPage() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Código</TableHead>
                 <TableHead>Categoria</TableHead>
+                <TableHead>Lote</TableHead>
+                <TableHead>Entrada</TableHead>
+                <TableHead>Endereço</TableHead>
                 <TableHead className="text-right">Custo</TableHead>
                 <TableHead className="text-right">Preço</TableHead>
                 <TableHead className="w-24"></TableHead>
@@ -336,32 +365,44 @@ function ProdutosPage() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
                 </TableRow>
               )}
               {!isLoading && filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum produto encontrado.</TableCell>
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">Nenhum produto encontrado.</TableCell>
                 </TableRow>
               )}
-              {filtered.map((p) => (
+              {filtered.map((p: any) => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.name}</TableCell>
                   <TableCell className="text-muted-foreground">{p.sku ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{(p as any).category ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{p.category ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {p.lote ? (
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary border border-primary/20 font-medium">
+                        {p.lote}
+                      </span>
+                    ) : "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    {p.data_entrada
+                      ? new Date(p.data_entrada).toLocaleDateString("pt-BR")
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs max-w-[120px] truncate">
+                    {p.endereco ?? "—"}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums text-muted-foreground">
-                    {(p as any).cost ? formatBRL((p as any).cost) : "—"}
+                    {p.cost ? formatBRL(p.cost) : "—"}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{formatBRL(p.price)}</TableCell>
                   <TableCell className="flex gap-1 justify-end">
                     <Button size="icon" variant="ghost" onClick={() => openEdit(p)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => confirm(`Excluir "${p.name}"?`) && deleteMut.mutate(p.id)}
-                    >
+                    <Button size="icon" variant="ghost"
+                      onClick={() => confirm(`Excluir "${p.name}"?`) && deleteMut.mutate(p.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
@@ -371,9 +412,44 @@ function ProdutosPage() {
           </Table>
         </div>
         <p className="text-xs text-muted-foreground mt-3">
-          CSV: <code>nome,preco,sku</code> (ou separador <code>;</code>). Planilha XLSX: colunas <code>D</code> (SKU), <code>I</code> (descrição), <code>M</code> (custo), <code>N</code> (preço), <code>O</code> (categoria), <code>P</code> (subcategoria).
+          Planilha XLSX: <code>D</code> (Código ML), <code>I</code> (Descrição), <code>M</code> (Custo), <code>N</code> (Venda), <code>O</code> (Categoria), <code>P</code> (Subcategoria), <code>Q</code> (Lote), <code>R</code> (Cidade/Endereço), <code>S</code> (Data de entrada).
         </p>
       </Card>
+
+      {showLoteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-card border rounded-xl w-full max-w-sm shadow-2xl p-6 space-y-4">
+            <h2 className="text-lg font-bold">Número do Lote</h2>
+            <p className="text-sm text-muted-foreground">
+              Informe o lote desta importação. Será aplicado aos produtos que não tiverem lote na planilha.
+            </p>
+            <div>
+              <Label>Lote (opcional)</Label>
+              <Input
+                value={loteImport}
+                onChange={(e) => setLoteImport(e.target.value)}
+                placeholder="Ex: Lote 92, Lote 93..."
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1"
+                onClick={() => { setShowLoteModal(false); setPendingFile(null); }}>
+                Cancelar
+              </Button>
+              <Button className="flex-1" onClick={async () => {
+                if (pendingFile) {
+                  setShowLoteModal(false);
+                  await processXlsx(pendingFile, loteImport);
+                  setPendingFile(null);
+                }
+              }}>
+                Importar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

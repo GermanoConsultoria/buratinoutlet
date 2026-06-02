@@ -12,13 +12,55 @@ export type Database = {
   }
   public: {
     Tables: {
+      caixa: {
+        Row: {
+          id: string
+          aberto_por: string | null
+          fechado_por: string | null
+          valor_abertura: number
+          valor_fechamento: number | null
+          observacao_abertura: string | null
+          observacao_fechamento: string | null
+          aberto_em: string
+          fechado_em: string | null
+          status: string
+        }
+        Insert: {
+          id?: string
+          aberto_por?: string | null
+          fechado_por?: string | null
+          valor_abertura?: number
+          valor_fechamento?: number | null
+          observacao_abertura?: string | null
+          observacao_fechamento?: string | null
+          aberto_em?: string
+          fechado_em?: string | null
+          status?: string
+        }
+        Update: {
+          id?: string
+          aberto_por?: string | null
+          fechado_por?: string | null
+          valor_abertura?: number
+          valor_fechamento?: number | null
+          observacao_abertura?: string | null
+          observacao_fechamento?: string | null
+          aberto_em?: string
+          fechado_em?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string | null
           cost: number
           created_at: string
           created_by: string | null
+          data_entrada: string | null
+          endereco: string | null
           id: string
+          lote: string | null
           name: string
           price: number
           sku: string | null
@@ -30,7 +72,10 @@ export type Database = {
           cost?: number
           created_at?: string
           created_by?: string | null
+          data_entrada?: string | null
+          endereco?: string | null
           id?: string
+          lote?: string | null
           name: string
           price?: number
           sku?: string | null
@@ -42,7 +87,10 @@ export type Database = {
           cost?: number
           created_at?: string
           created_by?: string | null
+          data_entrada?: string | null
+          endereco?: string | null
           id?: string
+          lote?: string | null
           name?: string
           price?: number
           sku?: string | null
@@ -58,6 +106,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          modulos: string[]
           role: string
           updated_at: string
         }
@@ -67,6 +116,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id: string
+          modulos?: string[]
           role?: string
           updated_at?: string
         }
@@ -76,6 +126,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          modulos?: string[]
           role?: string
           updated_at?: string
         }
@@ -83,6 +134,8 @@ export type Database = {
       }
       sale_items: {
         Row: {
+          data_saida: string | null
+          desconto: number
           id: string
           name: string
           price: number
@@ -92,6 +145,8 @@ export type Database = {
           subtotal: number
         }
         Insert: {
+          data_saida?: string | null
+          desconto?: number
           id?: string
           name: string
           price: number
@@ -101,6 +156,8 @@ export type Database = {
           subtotal: number
         }
         Update: {
+          data_saida?: string | null
+          desconto?: number
           id?: string
           name?: string
           price?: number
@@ -135,6 +192,7 @@ export type Database = {
           change_due: number
           created_at: string
           created_by: string | null
+          desconto: number
           id: string
           payment_method: string
           receipt_number: number
@@ -148,6 +206,7 @@ export type Database = {
           change_due?: number
           created_at?: string
           created_by?: string | null
+          desconto?: number
           id?: string
           payment_method: string
           receipt_number?: number
@@ -161,6 +220,7 @@ export type Database = {
           change_due?: number
           created_at?: string
           created_by?: string | null
+          desconto?: number
           id?: string
           payment_method?: string
           receipt_number?: number

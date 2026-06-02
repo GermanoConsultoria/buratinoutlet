@@ -6,10 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { criarUsuario } from "@/lib/usuarios.functions";
+import { MODULOS_LABELS, MODULOS_PADRAO, type Modulo, type Role } from "@/lib/auth";
 
 interface Props {
   onSuccess: () => void;
 }
+
+const TODOS_MODULOS = Object.entries(MODULOS_LABELS) as [Modulo, string][];
 
 export default function ModalCriarUsuario({ onSuccess }: Props) {
   const criar = useServerFn(criarUsuario);
@@ -18,8 +21,25 @@ export default function ModalCriarUsuario({ onSuccess }: Props) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [cargo, setCargo] = useState("");
-  const [role, setRole] = useState("USER");
+  const [role, setRole] = useState<Role>("USER");
   const [senha, setSenha] = useState("");
+  const [modulos, setModulos] = useState<Modulo[]>(MODULOS_PADRAO["USER"]);
+
+  function handleRoleChange(novoRole: Role) {
+    setRole(novoRole);
+    // OWNER sempre tem tudo, não precisa selecionar
+    if (novoRole !== "OWNER") {
+      setModulos(MODULOS_PADRAO[novoRole]);
+    }
+  }
+
+  function toggleModulo(modulo: Modulo) {
+    setModulos((prev) =>
+      prev.includes(modulo)
+        ? prev.filter((m) => m !== modulo)
+        : [...prev, modulo]
+    );
+  }
 
   function resetar() {
     setFullName("");
@@ -27,6 +47,7 @@ export default function ModalCriarUsuario({ onSuccess }: Props) {
     setCargo("");
     setRole("USER");
     setSenha("");
+    setModulos(MODULOS_PADRAO["USER"]);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -42,8 +63,9 @@ export default function ModalCriarUsuario({ onSuccess }: Props) {
           full_name: fullName.trim(),
           email: email.trim(),
           cargo: cargo.trim() || undefined,
-          role: role as "USER" | "MANAGER" | "OWNER",
+          role,
           senha,
+          modulos: role === "OWNER" ? Object.keys(MODULOS_LABELS) as Modulo[] : modulos,
         },
       });
       toast.success("Usuário criado com sucesso.");
@@ -65,8 +87,8 @@ export default function ModalCriarUsuario({ onSuccess }: Props) {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-card border rounded-xl w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between p-5 border-b">
+          <div className="bg-card border rounded-xl w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-5 border-b sticky top-0 bg-card">
               <h2 className="text-lg font-bold">Novo Usuário</h2>
               <button
                 onClick={() => { setOpen(false); resetar(); }}
@@ -107,7 +129,7 @@ export default function ModalCriarUsuario({ onSuccess }: Props) {
                 <Label>Perfil de Acesso</Label>
                 <select
                   value={role}
-                  onChange={(e) => setRole(e.target.value)}
+                  onChange={(e) => handleRoleChange(e.target.value as Role)}
                   className="w-full mt-1 border rounded-md px-3 py-2 text-sm bg-background"
                 >
                   <option value="USER">Usuário</option>
@@ -115,6 +137,32 @@ export default function ModalCriarUsuario({ onSuccess }: Props) {
                   <option value="OWNER">Administrador</option>
                 </select>
               </div>
+
+              {role !== "OWNER" && (
+                <div>
+                  <Label>Módulos com acesso</Label>
+                  <div className="mt-2 space-y-2 border rounded-lg p-3 bg-muted/30">
+                    {TODOS_MODULOS.map(([key, label]) => (
+                      <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={modulos.includes(key)}
+                          onChange={() => toggleModulo(key)}
+                          className="w-4 h-4 rounded"
+                        />
+                        <span className="text-sm">{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {role === "OWNER" && (
+                <div className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                  Administradores têm acesso a todos os módulos automaticamente.
+                </div>
+              )}
+
               <div>
                 <Label>Senha inicial *</Label>
                 <Input

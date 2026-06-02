@@ -1,7 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   ShoppingCart, Package, Receipt, Wallet, ArrowDownCircle, ArrowUpCircle,
-  BarChart3, Users, ListTree, Settings, LogOut,
+  BarChart3, Users, ListTree, LogOut, History,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -11,34 +11,50 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/logo.png";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+import { temAcesso, isOwner, type Modulo } from "@/lib/auth";
 
-const groups = [
+type NavItem = {
+  title: string;
+  url: string;
+  icon: React.ElementType;
+  modulo: Modulo;
+};
+
+type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
+
+const groups: NavGroup[] = [
   {
     label: "Operacional",
     items: [
-      { title: "PDV", url: "/pdv", icon: ShoppingCart },
-      { title: "Vendas", url: "/vendas", icon: Receipt },
+      { title: "PDV", url: "/pdv", icon: ShoppingCart, modulo: "pdv" },
+      { title: "Histórico de Vendas", url: "/historico-vendas", icon: History, modulo: "historico_vendas" },
+      { title: "Vendas", url: "/vendas", icon: Receipt, modulo: "vendas" },
     ],
   },
   {
     label: "Cadastros",
     items: [
-      { title: "Produtos", url: "/produtos", icon: Package },
+      { title: "Produtos", url: "/produtos", icon: Package, modulo: "produtos" },
     ],
   },
   {
     label: "Financeiro",
     items: [
-      { title: "Contas a pagar", url: "/financeiro/pagar", icon: ArrowUpCircle },
-      { title: "Contas a receber", url: "/financeiro/receber", icon: ArrowDownCircle },
-      { title: "Balancete", url: "/financeiro/balancete", icon: BarChart3 },
+      { title: "Contas a pagar", url: "/financeiro/pagar", icon: ArrowUpCircle, modulo: "financeiro" },
+      { title: "Contas a receber", url: "/financeiro/receber", icon: ArrowDownCircle, modulo: "financeiro" },
+      { title: "Balancete", url: "/financeiro/balancete", icon: BarChart3, modulo: "financeiro" },
+      { title: "Dashboard", url: "/financeiro/dashboard", icon: Wallet, modulo: "financeiro" },
     ],
   },
   {
     label: "Configurações",
     items: [
-      { title: "Usuários", url: "/config/usuarios", icon: Users },
-      { title: "Plano de contas", url: "/config/plano-contas", icon: ListTree },
+      { title: "Usuários", url: "/config/usuarios", icon: Users, modulo: "configuracoes" },
+      { title: "Plano de contas", url: "/config/plano-contas", icon: ListTree, modulo: "configuracoes" },
     ],
   },
 ];
@@ -49,12 +65,20 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const isActive = (p: string) => currentPath === p || currentPath.startsWith(p + "/");
+  const { profile } = useAuth();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success("Você saiu.");
     navigate({ to: "/login" });
   };
+
+  const visibleGroups = groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => temAcesso(profile, item.modulo)),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <Sidebar collapsible="icon">
@@ -71,7 +95,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {groups.map((group) => (
+        {visibleGroups.map((group) => (
           <SidebarGroup key={group.label}>
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarGroupContent>
@@ -93,6 +117,12 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
+        {profile && (
+          <div className="px-3 py-2 text-xs text-sidebar-foreground/60 border-b border-sidebar-border mb-1">
+            <p className="font-medium text-sidebar-foreground truncate">{profile.full_name ?? "Usuário"}</p>
+            <p className="capitalize">{profile.role === "OWNER" ? "Administrador" : profile.role === "MANAGER" ? "Gerente" : "Usuário"}</p>
+          </div>
+        )}
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleLogout}>

@@ -37,58 +37,109 @@ export function ReceiptDialog({ receipt, onClose }: { receipt: Receipt | null; o
       </DialogContent>
 
       {/* Hidden printable area */}
+      <style>{`
+        @media print {
+          body * { visibility: hidden !important; }
+          #print-receipt, #print-receipt * { visibility: visible !important; }
+          #print-receipt {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 80mm !important;
+            padding: 4mm !important;
+            font-family: 'Courier New', Courier, monospace !important;
+            font-size: 11pt !important;
+            font-weight: 600 !important;
+            color: #000 !important;
+            background: #fff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+        }
+      `}</style>
       <div id="print-receipt" className="hidden print:block">
-        <ReceiptBody receipt={receipt} />
+        <ReceiptBody receipt={receipt} print />
       </div>
     </Dialog>
   );
 }
 
-function ReceiptBody({ receipt }: { receipt: Receipt }) {
-  const line = "------------------------------";
+function ReceiptBody({ receipt, print = false }: { receipt: Receipt; print?: boolean }) {
+  const line = "================================";
+  const halfLine = "--------------------------------";
+
+  const titleStyle = print
+    ? { fontWeight: 900, fontSize: "13pt", letterSpacing: "0.05em" }
+    : {};
+  const boldStyle = print
+    ? { fontWeight: 800 }
+    : {};
+  const normalStyle = print
+    ? { fontWeight: 600 }
+    : {};
+
   return (
-    <div>
-      <div className="text-center">
-        <div className="font-bold text-sm">BURATIN OUTLET</div>
-        <div>Cupom Não Fiscal</div>
-        <div>{formatDateTime(receipt.created_at)}</div>
-        <div>Cupom Nº {String(receipt.receipt_number).padStart(6, "0")}</div>
+    <div style={normalStyle}>
+      <div className="text-center" style={titleStyle}>
+        <div className="font-black text-base tracking-wide">BURATIN OUTLET</div>
       </div>
-      <div className="my-1">{line}</div>
-      <div className="font-bold">ITEM  DESCRIÇÃO</div>
+      <div className="text-center font-bold text-sm mt-0.5">Cupom Não Fiscal</div>
+      <div className="text-center">{formatDateTime(receipt.created_at)}</div>
+      <div className="text-center font-bold">
+        Cupom Nº {String(receipt.receipt_number).padStart(6, "0")}
+      </div>
+
+      <div className="my-1 font-bold">{line}</div>
+
+      <div className="font-black text-xs mb-1">ITEM  DESCRIÇÃO</div>
+
       {receipt.items.map((it, i) => (
-        <div key={i} className="mb-1">
-          <div>{String(i + 1).padStart(3, "0")} {it.name}</div>
-          <div className="flex justify-between">
+        <div key={i} className="mb-1.5">
+          <div className="font-bold">
+            {String(i + 1).padStart(3, "0")} {it.name}
+          </div>
+          <div className="flex justify-between font-semibold">
             <span>{it.quantity} x {formatBRL(it.price)}</span>
-            <span>{formatBRL(it.price * it.quantity)}</span>
+            <span className="font-black">{formatBRL(it.price * it.quantity)}</span>
           </div>
         </div>
       ))}
-      <div>{line}</div>
-      <div className="flex justify-between font-bold">
+
+      <div className="font-bold">{line}</div>
+
+      <div className="flex justify-between font-black text-sm mt-1">
         <span>TOTAL</span>
         <span>{formatBRL(receipt.total)}</span>
       </div>
-      <div className="flex justify-between">
+
+      <div className="font-bold">{halfLine}</div>
+
+      <div className="flex justify-between font-bold">
         <span>Pagamento</span>
         <span>{paymentLabel(receipt.payment_method)}</span>
       </div>
+
       {receipt.amount_paid != null && (
         <>
-          <div className="flex justify-between">
+          <div className="flex justify-between font-semibold">
             <span>Recebido</span>
             <span>{formatBRL(receipt.amount_paid)}</span>
           </div>
-          <div className="flex justify-between">
+          <div className="flex justify-between font-bold">
             <span>Troco</span>
             <span>{formatBRL(receipt.change_due)}</span>
           </div>
         </>
       )}
-      <div>{line}</div>
-      <div className="text-center mt-2">Obrigado pela preferência!</div>
-      <div className="text-center text-[10px] mt-1">DOCUMENTO SEM VALOR FISCAL</div>
+
+      <div className="font-bold mt-1">{line}</div>
+
+      <div className="text-center font-black text-sm mt-2">
+        Obrigado pela preferência!
+      </div>
+      <div className="text-center font-bold text-xs mt-1">
+        DOCUMENTO SEM VALOR FISCAL
+      </div>
     </div>
   );
 }

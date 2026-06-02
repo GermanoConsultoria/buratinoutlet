@@ -13,6 +13,7 @@ type Profile = {
   cargo: string | null;
   role: string;
   ativo: boolean;
+  modulos: string[];
 };
 
 interface Props {

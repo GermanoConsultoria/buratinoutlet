@@ -15,8 +15,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppVendasRouteImport } from './routes/_app/vendas'
 import { Route as AppProdutosRouteImport } from './routes/_app/produtos'
 import { Route as AppPdvRouteImport } from './routes/_app/pdv'
+import { Route as AppHistoricoVendasRouteImport } from './routes/_app/historico-vendas'
 import { Route as AppFinanceiroReceberRouteImport } from './routes/_app/financeiro.receber'
 import { Route as AppFinanceiroPagarRouteImport } from './routes/_app/financeiro.pagar'
+import { Route as AppFinanceiroDashboardRouteImport } from './routes/_app/financeiro.dashboard'
 import { Route as AppFinanceiroBalanceteRouteImport } from './routes/_app/financeiro.balancete'
 import { Route as AppConfigUsuariosRouteImport } from './routes/_app/config.usuarios'
 import { Route as AppConfigPlanoContasRouteImport } from './routes/_app/config.plano-contas'
@@ -50,6 +52,11 @@ const AppPdvRoute = AppPdvRouteImport.update({
   path: '/pdv',
   getParentRoute: () => AppRoute,
 } as any)
+const AppHistoricoVendasRoute = AppHistoricoVendasRouteImport.update({
+  id: '/historico-vendas',
+  path: '/historico-vendas',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppFinanceiroReceberRoute = AppFinanceiroReceberRouteImport.update({
   id: '/financeiro/receber',
   path: '/financeiro/receber',
@@ -58,6 +65,11 @@ const AppFinanceiroReceberRoute = AppFinanceiroReceberRouteImport.update({
 const AppFinanceiroPagarRoute = AppFinanceiroPagarRouteImport.update({
   id: '/financeiro/pagar',
   path: '/financeiro/pagar',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFinanceiroDashboardRoute = AppFinanceiroDashboardRouteImport.update({
+  id: '/financeiro/dashboard',
+  path: '/financeiro/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
 const AppFinanceiroBalanceteRoute = AppFinanceiroBalanceteRouteImport.update({
@@ -79,24 +91,28 @@ const AppConfigPlanoContasRoute = AppConfigPlanoContasRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/historico-vendas': typeof AppHistoricoVendasRoute
   '/pdv': typeof AppPdvRoute
   '/produtos': typeof AppProdutosRoute
   '/vendas': typeof AppVendasRoute
   '/config/plano-contas': typeof AppConfigPlanoContasRoute
   '/config/usuarios': typeof AppConfigUsuariosRoute
   '/financeiro/balancete': typeof AppFinanceiroBalanceteRoute
+  '/financeiro/dashboard': typeof AppFinanceiroDashboardRoute
   '/financeiro/pagar': typeof AppFinanceiroPagarRoute
   '/financeiro/receber': typeof AppFinanceiroReceberRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/historico-vendas': typeof AppHistoricoVendasRoute
   '/pdv': typeof AppPdvRoute
   '/produtos': typeof AppProdutosRoute
   '/vendas': typeof AppVendasRoute
   '/config/plano-contas': typeof AppConfigPlanoContasRoute
   '/config/usuarios': typeof AppConfigUsuariosRoute
   '/financeiro/balancete': typeof AppFinanceiroBalanceteRoute
+  '/financeiro/dashboard': typeof AppFinanceiroDashboardRoute
   '/financeiro/pagar': typeof AppFinanceiroPagarRoute
   '/financeiro/receber': typeof AppFinanceiroReceberRoute
 }
@@ -105,12 +121,14 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/_app/historico-vendas': typeof AppHistoricoVendasRoute
   '/_app/pdv': typeof AppPdvRoute
   '/_app/produtos': typeof AppProdutosRoute
   '/_app/vendas': typeof AppVendasRoute
   '/_app/config/plano-contas': typeof AppConfigPlanoContasRoute
   '/_app/config/usuarios': typeof AppConfigUsuariosRoute
   '/_app/financeiro/balancete': typeof AppFinanceiroBalanceteRoute
+  '/_app/financeiro/dashboard': typeof AppFinanceiroDashboardRoute
   '/_app/financeiro/pagar': typeof AppFinanceiroPagarRoute
   '/_app/financeiro/receber': typeof AppFinanceiroReceberRoute
 }
@@ -119,24 +137,28 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/historico-vendas'
     | '/pdv'
     | '/produtos'
     | '/vendas'
     | '/config/plano-contas'
     | '/config/usuarios'
     | '/financeiro/balancete'
+    | '/financeiro/dashboard'
     | '/financeiro/pagar'
     | '/financeiro/receber'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
+    | '/historico-vendas'
     | '/pdv'
     | '/produtos'
     | '/vendas'
     | '/config/plano-contas'
     | '/config/usuarios'
     | '/financeiro/balancete'
+    | '/financeiro/dashboard'
     | '/financeiro/pagar'
     | '/financeiro/receber'
   id:
@@ -144,12 +166,14 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/login'
+    | '/_app/historico-vendas'
     | '/_app/pdv'
     | '/_app/produtos'
     | '/_app/vendas'
     | '/_app/config/plano-contas'
     | '/_app/config/usuarios'
     | '/_app/financeiro/balancete'
+    | '/_app/financeiro/dashboard'
     | '/_app/financeiro/pagar'
     | '/_app/financeiro/receber'
   fileRoutesById: FileRoutesById
@@ -204,6 +228,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPdvRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/historico-vendas': {
+      id: '/_app/historico-vendas'
+      path: '/historico-vendas'
+      fullPath: '/historico-vendas'
+      preLoaderRoute: typeof AppHistoricoVendasRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/financeiro/receber': {
       id: '/_app/financeiro/receber'
       path: '/financeiro/receber'
@@ -216,6 +247,13 @@ declare module '@tanstack/react-router' {
       path: '/financeiro/pagar'
       fullPath: '/financeiro/pagar'
       preLoaderRoute: typeof AppFinanceiroPagarRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/financeiro/dashboard': {
+      id: '/_app/financeiro/dashboard'
+      path: '/financeiro/dashboard'
+      fullPath: '/financeiro/dashboard'
+      preLoaderRoute: typeof AppFinanceiroDashboardRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/financeiro/balancete': {
@@ -243,23 +281,27 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppHistoricoVendasRoute: typeof AppHistoricoVendasRoute
   AppPdvRoute: typeof AppPdvRoute
   AppProdutosRoute: typeof AppProdutosRoute
   AppVendasRoute: typeof AppVendasRoute
   AppConfigPlanoContasRoute: typeof AppConfigPlanoContasRoute
   AppConfigUsuariosRoute: typeof AppConfigUsuariosRoute
   AppFinanceiroBalanceteRoute: typeof AppFinanceiroBalanceteRoute
+  AppFinanceiroDashboardRoute: typeof AppFinanceiroDashboardRoute
   AppFinanceiroPagarRoute: typeof AppFinanceiroPagarRoute
   AppFinanceiroReceberRoute: typeof AppFinanceiroReceberRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppHistoricoVendasRoute: AppHistoricoVendasRoute,
   AppPdvRoute: AppPdvRoute,
   AppProdutosRoute: AppProdutosRoute,
   AppVendasRoute: AppVendasRoute,
   AppConfigPlanoContasRoute: AppConfigPlanoContasRoute,
   AppConfigUsuariosRoute: AppConfigUsuariosRoute,
   AppFinanceiroBalanceteRoute: AppFinanceiroBalanceteRoute,
+  AppFinanceiroDashboardRoute: AppFinanceiroDashboardRoute,
   AppFinanceiroPagarRoute: AppFinanceiroPagarRoute,
   AppFinanceiroReceberRoute: AppFinanceiroReceberRoute,
 }
