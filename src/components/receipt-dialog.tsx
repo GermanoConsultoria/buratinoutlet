@@ -55,6 +55,8 @@ export function ReceiptDialog({ receipt, onClose }: { receipt: Receipt | null; o
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
+          [role="dialog"] { display: none !important; }
+          [data-radix-popper-content-wrapper] { display: none !important; }
         }
       `}</style>
       <div id="print-receipt" className="hidden print:block">
@@ -70,9 +72,6 @@ function ReceiptBody({ receipt, print = false }: { receipt: Receipt; print?: boo
 
   const titleStyle = print
     ? { fontWeight: 900, fontSize: "13pt", letterSpacing: "0.05em" }
-    : {};
-  const boldStyle = print
-    ? { fontWeight: 800 }
     : {};
   const normalStyle = print
     ? { fontWeight: 600 }
