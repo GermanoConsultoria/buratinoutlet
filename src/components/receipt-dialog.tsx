@@ -23,7 +23,6 @@ export function ReceiptDialog({ receipt, onClose }: { receipt: Receipt | null; o
           <DialogTitle>Cupom #{receipt.receipt_number}</DialogTitle>
         </DialogHeader>
 
-        {/* Preview on screen */}
         <div className="font-mono text-xs bg-white text-black border rounded p-3 max-h-[60vh] overflow-auto">
           <ReceiptBody receipt={receipt} />
         </div>
@@ -39,19 +38,25 @@ export function ReceiptDialog({ receipt, onClose }: { receipt: Receipt | null; o
       <style>{`
         @media print {
           @page {
-            size: 80mm auto;
+            size: 72mm auto;
             margin: 0mm;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 72mm !important;
           }
           body * { visibility: hidden !important; }
           #print-receipt, #print-receipt * { visibility: visible !important; }
           #print-receipt {
-            position: fixed !important;
+            position: absolute !important;
             top: 0 !important;
             left: 0 !important;
-            width: 72mm !important;
-            padding: 3mm !important;
+            width: 70mm !important;
+            margin: 0 !important;
+            padding: 1mm 2mm !important;
             font-family: 'Courier New', Courier, monospace !important;
-            font-size: 10pt !important;
+            font-size: 9pt !important;
             font-weight: 600 !important;
             color: #000 !important;
             background: #fff !important;
@@ -70,76 +75,80 @@ export function ReceiptDialog({ receipt, onClose }: { receipt: Receipt | null; o
 }
 
 function ReceiptBody({ receipt, print = false }: { receipt: Receipt; print?: boolean }) {
-  const line = "================================";
-  const halfLine = "--------------------------------";
-
   const titleStyle = print
-    ? { fontWeight: 900, fontSize: "13pt", letterSpacing: "0.05em" }
+    ? { fontWeight: 900, fontSize: "11pt", letterSpacing: "0.03em" }
     : {};
   const normalStyle = print
     ? { fontWeight: 600 }
     : {};
 
+  const Linha = () => (
+    <div style={{ borderTop: "1px dashed #000", margin: "3px 0" }} />
+  );
+  const LinhaDupla = () => (
+    <div style={{ borderTop: "2px solid #000", margin: "3px 0" }} />
+  );
+
   return (
     <div style={normalStyle}>
       <div className="text-center" style={titleStyle}>
-        <div className="font-black text-base tracking-wide">BURATIN OUTLET</div>
+        <div className="font-black tracking-wide">BURATIN OUTLET</div>
       </div>
-      <div className="text-center font-bold text-sm mt-0.5">Cupom Não Fiscal</div>
-      <div className="text-center">{formatDateTime(receipt.created_at)}</div>
-      <div className="text-center font-bold">
+      <div className="text-center font-bold text-xs mt-0.5">Cupom Não Fiscal</div>
+      <div className="text-center text-xs">{formatDateTime(receipt.created_at)}</div>
+      <div className="text-center font-bold text-xs">
         Cupom Nº {String(receipt.receipt_number).padStart(6, "0")}
       </div>
 
-      <div className="my-1 font-bold">{line}</div>
+      <LinhaDupla />
 
       <div className="font-black text-xs mb-1">ITEM  DESCRIÇÃO</div>
 
       {receipt.items.map((it, i) => (
-        <div key={i} className="mb-1.5">
-          <div className="font-bold">
+        <div key={i} className="mb-1">
+          <div className="font-bold text-xs">
             {String(i + 1).padStart(3, "0")} {it.name}
           </div>
-          <div className="flex justify-between font-semibold">
+          <div className="flex justify-between font-semibold text-xs">
             <span>{it.quantity} x {formatBRL(it.price)}</span>
             <span className="font-black">{formatBRL(it.price * it.quantity)}</span>
           </div>
         </div>
       ))}
 
-      <div className="font-bold">{line}</div>
+      <LinhaDupla />
 
-      <div className="flex justify-between font-black text-sm mt-1">
+      <div className="flex justify-between font-black text-xs mt-1">
         <span>TOTAL</span>
         <span>{formatBRL(receipt.total)}</span>
       </div>
 
-      <div className="font-bold">{halfLine}</div>
+      <Linha />
 
-      <div className="flex justify-between font-bold">
+      <div className="flex justify-between font-bold text-xs">
         <span>Pagamento</span>
         <span>{paymentLabel(receipt.payment_method)}</span>
       </div>
 
       {receipt.amount_paid != null && (
         <>
-          <div className="flex justify-between font-semibold">
+          <div className="flex justify-between font-semibold text-xs">
             <span>Recebido</span>
             <span>{formatBRL(receipt.amount_paid)}</span>
           </div>
-          <div className="flex justify-between font-bold">
+          <div className="flex justify-between font-bold text-xs">
             <span>Troco</span>
             <span>{formatBRL(receipt.change_due)}</span>
           </div>
         </>
       )}
 
-      <div className="font-bold mt-1">{line}</div>
+      <LinhaDupla />
 
-      <div className="text-center font-black text-sm mt-2">
+      <div className="text-center font-black text-xs mt-1">
         Obrigado pela preferência!
       </div>
-      <div className="text-center font-bold text-xs mt-1">
+      <div className="text-center font-bold text-xs mt-0.5">
         DOCUMENTO SEM VALOR FISCAL
       </div>
     </div>
