@@ -36,19 +36,22 @@ export function ReceiptDialog({ receipt, onClose }: { receipt: Receipt | null; o
         </DialogFooter>
       </DialogContent>
 
-      {/* Hidden printable area */}
       <style>{`
         @media print {
+          @page {
+            size: 80mm auto;
+            margin: 0mm;
+          }
           body * { visibility: hidden !important; }
           #print-receipt, #print-receipt * { visibility: visible !important; }
           #print-receipt {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
-            width: 80mm !important;
-            padding: 4mm !important;
+            width: 72mm !important;
+            padding: 3mm !important;
             font-family: 'Courier New', Courier, monospace !important;
-            font-size: 11pt !important;
+            font-size: 10pt !important;
             font-weight: 600 !important;
             color: #000 !important;
             background: #fff !important;
