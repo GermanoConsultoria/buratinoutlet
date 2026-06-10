@@ -4,6 +4,7 @@ export type Caixa = {
   id: string;
   aberto_por: string | null;
   fechado_por: string | null;
+  nome_operador: string | null; // <-- ADICIONAR ESTA LINHA
   valor_abertura: number;
   valor_fechamento: number | null;
   observacao_abertura: string | null;
@@ -21,5 +22,6 @@ export type ResumoCaixa = {
   total_debito: number;
   total_pix: number;
   qtd_vendas: number;
+  total_sangrias: number; // <-- ADICIONADO
   saldo_esperado: number;
 };

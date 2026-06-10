@@ -33,13 +33,12 @@ function HistoricoVendasPage() {
       receipt_number: s.receipt_number,
       created_at: s.created_at,
       total: Number(s.total),
-      payment_method: s.payment_method,
+      payment_method: s.payment_method as any,
+      payment_methods: s.payment_methods ?? undefined, // <-- ADICIONE ESTA LINHA
       amount_paid: s.amount_paid != null ? Number(s.amount_paid) : null,
       change_due: Number(s.change_due),
       items: (s.sale_items ?? []).map((i: any) => ({
-        name: i.name,
-        price: Number(i.price),
-        quantity: Number(i.quantity),
+        name: i.name, price: Number(i.price), quantity: Number(i.quantity),
       })),
     });
   };

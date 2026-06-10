@@ -3,18 +3,20 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import { listProducts } from "@/lib/products.functions";
-import { createSale, getCaixaAberto, listSales } from "@/lib/sales.functions";
+import { createSale, getCaixaAberto, listSales, listSangrias } from "@/lib/sales.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import {
   ShoppingCart, Plus, Minus, X, Search, Barcode,
-  ChevronLeft, Tag, Lock, Unlock, Percent,
+  ChevronLeft, Tag, Lock, Unlock, Percent, ArrowDownCircle, FileText, SplitSquareHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatBRL } from "@/lib/format";
 import { ReceiptDialog, type Receipt } from "@/components/receipt-dialog";
 import { ModalAbrirCaixa, ModalFecharCaixa } from "@/components/caixa-dialog";
+import { ModalSangria, ComprovanteSangria } from "@/components/sangria-dialog";
+import { FechamentoDiarioDialog, FechamentoMensalDialog } from "@/components/fechamento-dialog";
 import type { Caixa, ResumoCaixa } from "@/lib/caixa.types";
 import { useAuth } from "@/hooks/use-auth";
 import { isManagerOrOwner } from "@/lib/auth";
@@ -32,16 +34,38 @@ type CartItem = {
   name: string;
   price: number;
   quantity: number;
-  desconto: number; // desconto por item em R$
+  desconto: number;
 };
 
 type Payment = "dinheiro" | "credito" | "debito" | "pix";
+
+// Tipo utilizado para o estado do formulário no pagamento misto (aceita string com vírgula)
+type PaymentMistoState = {
+  method: Payment;
+  amount: string;
+};
+
+// Tipo esperado pelo banco de dados e pelo resumo
+type PaymentMisto = {
+  method: Payment;
+  valor: number;
+};
+
+type SangriaRecibo = {
+  id: string;
+  valor: number;
+  motivo: string | null;
+  nome_responsavel: string;
+  created_at: string;
+  caixa_id: string | null;
+};
 
 function PdvPage() {
   const list = useServerFn(listProducts);
   const sell = useServerFn(createSale);
   const getCaixa = useServerFn(getCaixaAberto);
   const getSales = useServerFn(listSales);
+  const getSangrias = useServerFn(listSangrias);
   const { profile } = useAuth();
 
   const podeDesconto = isManagerOrOwner(profile);
@@ -54,6 +78,11 @@ function PdvPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [payment, setPayment] = useState<Payment>("dinheiro");
   const [paid, setPaid] = useState("");
+  const [misto, setMisto] = useState(false);
+  const [paymentsMisto, setPaymentsMisto] = useState<PaymentMistoState[]>([
+    { method: "dinheiro", amount: "" },
+    { method: "credito", amount: "" },
+  ]);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [printPrompt, setPrintPrompt] = useState<Receipt | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -69,6 +98,12 @@ function PdvPage() {
   const [showFecharCaixa, setShowFecharCaixa] = useState(false);
   const [resumoCaixa, setResumoCaixa] = useState<ResumoCaixa | null>(null);
 
+  // Sangria e Fechamentos
+  const [showSangria, setShowSangria] = useState(false);
+  const [comprovanteSangria, setComprovanteSangria] = useState<SangriaRecibo | null>(null);
+  const [showFechamentoDiario, setShowFechamentoDiario] = useState(false);
+  const [showFechamentoMensal, setShowFechamentoMensal] = useState(false);
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const barcodeBufferRef = useRef("");
   const barcodeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -83,16 +118,42 @@ function PdvPage() {
   async function handleFecharCaixaClick() {
     if (!caixaAberto) return;
     try {
-      const vendas = await getSales();
+      const [vendas, sangrias] = await Promise.all([
+        getSales(),
+        getSangrias({ data: { caixa_id: caixaAberto.id } })
+      ]);
       const abertoEm = new Date(caixaAberto.aberto_em).getTime();
       const vendasDoCaixa = vendas.filter(
         (v) => !v.canceled_at && new Date(v.created_at).getTime() >= abertoEm
       );
+      const sangriasDoCaixa = sangrias.filter(
+        (s) => new Date(s.created_at).getTime() >= abertoEm
+      );
+      const total_sangrias = sangriasDoCaixa.reduce((acc, s) => acc + Number(s.valor), 0);
       const total_vendas = vendasDoCaixa.reduce((s, v) => s + Number(v.total), 0);
-      const total_dinheiro = vendasDoCaixa.filter((v) => v.payment_method === "dinheiro").reduce((s, v) => s + Number(v.total), 0);
-      const total_credito = vendasDoCaixa.filter((v) => v.payment_method === "credito").reduce((s, v) => s + Number(v.total), 0);
-      const total_debito = vendasDoCaixa.filter((v) => v.payment_method === "debito").reduce((s, v) => s + Number(v.total), 0);
-      const total_pix = vendasDoCaixa.filter((v) => v.payment_method === "pix").reduce((s, v) => s + Number(v.total), 0);
+
+      // Calcula dinheiro incluindo misto
+      let total_dinheiro = 0;
+      let total_credito = 0;
+      let total_debito = 0;
+      let total_pix = 0;
+      for (const v of vendasDoCaixa) {
+        if (v.payment_method === "misto" && (v as any).payment_methods) {
+          for (const m of (v as any).payment_methods as PaymentMisto[]) {
+            if (m.method === "dinheiro") total_dinheiro += m.valor;
+            else if (m.method === "credito") total_credito += m.valor;
+            else if (m.method === "debito") total_debito += m.valor;
+            else if (m.method === "pix") total_pix += m.valor;
+          }
+        } else {
+          if (v.payment_method === "dinheiro") total_dinheiro += Number(v.total);
+          else if (v.payment_method === "credito") total_credito += Number(v.total);
+          else if (v.payment_method === "debito") total_debito += Number(v.total);
+          else if (v.payment_method === "pix") total_pix += Number(v.total);
+        }
+      }
+
+      const saldo_esperado = caixaAberto.valor_abertura + total_dinheiro - total_sangrias;
       setResumoCaixa({
         caixa: caixaAberto,
         total_vendas,
@@ -100,8 +161,9 @@ function PdvPage() {
         total_credito,
         total_debito,
         total_pix,
+        total_sangrias,
         qtd_vendas: vendasDoCaixa.length,
-        saldo_esperado: caixaAberto.valor_abertura + total_dinheiro,
+        saldo_esperado,
       });
       setShowFecharCaixa(true);
     } catch (e) {
@@ -207,20 +269,91 @@ function PdvPage() {
 
   const removeItem = (idx: number) => setCart((c) => c.filter((_, i) => i !== idx));
 
+  // Cálculos Gerais do Carrinho
   const subtotalItens = cart.reduce((s, i) => s + i.price * i.quantity, 0);
   const totalDescontoItens = cart.reduce((s, i) => s + i.desconto, 0);
   const descontoGeralNum = parseFloat(descontoGeral.replace(",", ".")) || 0;
   const totalDesconto = totalDescontoItens + descontoGeralNum;
   const total = Math.max(0, subtotalItens - totalDesconto);
   const paidNum = parseFloat(paid.replace(",", ".")) || 0;
-  const change = payment === "dinheiro" ? Math.max(0, paidNum - total) : 0;
-  const insufficient = payment === "dinheiro" && paid !== "" && paidNum < total;
+
+  // Cálculos para misto
+  const totalMisto = paymentsMisto.reduce((s, p) => s + (parseFloat(p.amount.replace(",", ".")) || 0), 0);
+  const faltaMisto = Math.max(0, total - totalMisto);
+  const trocoMisto = Math.max(0, totalMisto - total);
+
+  const change = !misto && payment === "dinheiro" ? Math.max(0, paidNum - total) : 0;
+  const insufficient = !misto && payment === "dinheiro" && paid !== "" && paidNum < total;
+  const mistoInsuficiente = misto && (totalMisto + 0.001) < total;
+
+  const updatePaymentMistoMethod = (idx: number, method: Payment) => {
+    setPaymentsMisto((prev) => {
+      const copy = [...prev];
+      copy[idx].method = method;
+      return copy;
+    });
+  };
+
+  const handleMistoValueChange = (idx: number, value: string) => {
+    // Permite apenas números e vírgulas
+    let safeValue = value.replace(/[^0-9,]/g, "");
+    
+    // Evita mais de uma vírgula
+    const parts = safeValue.split(",");
+    if (parts.length > 2) {
+      safeValue = parts[0] + "," + parts.slice(1).join("");
+    }
+
+    setPaymentsMisto((prev) => {
+      const copy = [...prev];
+      copy[idx].amount = safeValue;
+
+      // Puxa o restante automaticamente se estiver digitando no 1º input e houver um 2º
+      if (idx === 0 && copy.length >= 2) {
+        const valorDigitado = parseFloat(safeValue.replace(",", ".")) || 0;
+        const restante = Math.max(0, total - valorDigitado);
+        
+        if (restante > 0) {
+          copy[1].amount = restante.toFixed(2).replace(".", ",");
+        } else {
+          copy[1].amount = "";
+        }
+      }
+      return copy;
+    });
+  };
+
+  const addPaymentMisto = () => {
+    setPaymentsMisto((prev) => [...prev, { method: "pix", amount: "" }]);
+  };
+
+  const removePaymentMisto = (idx: number) => {
+    setPaymentsMisto((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const PAYMENT_LABELS: Record<Payment, string> = {
+    dinheiro: "Dinheiro",
+    credito: "Crédito",
+    debito: "Débito",
+    pix: "PIX",
+  };
 
   const finalize = async () => {
     if (!cart.length) return toast.error("Carrinho vazio");
-    if (insufficient) return toast.error("Valor pago insuficiente");
     if (!caixaAberto) return toast.error("Abra o caixa antes de realizar vendas.");
+    if (!misto && insufficient) return toast.error("Valor pago insuficiente");
+    if (misto && mistoInsuficiente) return toast.error(`Falta ${formatBRL(faltaMisto)} para completar o pagamento`);
+
     setSubmitting(true);
+    
+    // Converte os dados do misto para o formato esperado pelo backend
+    const processadosMisto = paymentsMisto
+      .map(p => ({
+        method: p.method,
+        valor: parseFloat(p.amount.replace(",", ".")) || 0
+      }))
+      .filter(p => p.valor > 0);
+
     try {
       const res = await sell({
         data: {
@@ -229,25 +362,33 @@ function PdvPage() {
             name: i.name,
             price: i.price,
             quantity: i.quantity,
+            desconto: i.desconto > 0 ? i.desconto : undefined,
           })),
-          payment_method: payment,
-          amount_paid: payment === "dinheiro" ? paidNum || total : null,
+          payment_method: misto ? "misto" : payment,
+          amount_paid: misto ? totalMisto : (payment === "dinheiro" ? paidNum || total : null),
           caixa_id: caixaAberto.id,
+          payment_methods: misto ? processadosMisto : undefined,
+          desconto_geral: descontoGeralNum > 0 ? descontoGeralNum : undefined,
         },
       });
+
       const built: Receipt = {
         receipt_number: res.receipt_number,
         created_at: res.created_at,
-        items: cart,
+        items: cart.map((i) => ({ ...i, desconto: i.desconto })),
         total: res.total,
-        payment_method: payment,
-        amount_paid: payment === "dinheiro" ? paidNum || total : null,
+        payment_method: misto ? "misto" : payment,
+        amount_paid: misto ? totalMisto : (payment === "dinheiro" ? paidNum || total : null),
         change_due: res.change,
+        payment_methods: misto ? processadosMisto.map((p) => ({ method: p.method as string, valor: p.valor })) : undefined,
+        desconto_geral: descontoGeralNum > 0 ? descontoGeralNum : undefined,
       };
       setPrintPrompt(built);
       setCart([]);
       setPaid("");
       setDescontoGeral("");
+      setMisto(false);
+      setPaymentsMisto([{ method: "dinheiro", amount: "" }, { method: "credito", amount: "" }]);
       toast.success(`Venda #${res.receipt_number} registrada`);
     } catch (e) {
       toast.error((e as Error).message);
@@ -272,14 +413,34 @@ function PdvPage() {
             </>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {!caixaLoading && caixaAberto && (
+            <Button size="sm" variant="outline" onClick={() => setShowSangria(true)}
+              className="border-orange-300 text-orange-600 hover:bg-orange-50 h-7 text-xs gap-1">
+              <ArrowDownCircle size={13} /> Sangria
+            </Button>
+          )}
+         {!caixaLoading && caixaAberto && (
+            <Button size="sm" variant="outline" onClick={() => setShowFechamentoDiario(true)}
+              className="border-blue-300 text-blue-600 hover:bg-blue-50 h-7 text-xs gap-1">
+              <FileText size={13} /> Fechamento
+            </Button>
+          )}
+          {!caixaLoading && profile?.role === "OWNER" && (
+            <Button size="sm" variant="outline" onClick={() => setShowFechamentoMensal(true)}
+              className="border-purple-300 text-purple-600 hover:bg-purple-50 h-7 text-xs gap-1">
+              <FileText size={13} /> Fechamento Mensal
+            </Button>
+          )}
           {!caixaLoading && !caixaAberto && (
-            <Button size="sm" onClick={() => setShowAbrirCaixa(true)} className="bg-emerald-600 hover:bg-emerald-500 text-white h-7 text-xs gap-1">
+            <Button size="sm" onClick={() => setShowAbrirCaixa(true)}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white h-7 text-xs gap-1">
               <Unlock size={13} /> Abrir Caixa
             </Button>
           )}
           {!caixaLoading && caixaAberto && (
-            <Button size="sm" variant="outline" onClick={handleFecharCaixaClick} className="border-red-300 text-red-600 hover:bg-red-50 h-7 text-xs gap-1">
+            <Button size="sm" variant="outline" onClick={handleFecharCaixaClick}
+              className="border-red-300 text-red-600 hover:bg-red-50 h-7 text-xs gap-1">
               <Lock size={13} /> Fechar Caixa
             </Button>
           )}
@@ -294,7 +455,7 @@ function PdvPage() {
           </div>
         )}
 
-        {/* Área de produtos — simplificada para USER */}
+        {/* Área de produtos */}
         <Card className="p-4 flex flex-col min-h-0">
           <div className="flex items-center gap-2 mb-3">
             {!isUser && categoriaSel && !search && (
@@ -303,14 +464,9 @@ function PdvPage() {
               </button>
             )}
             <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <Input
-              ref={searchInputRef}
-              autoFocus
-              placeholder="Buscar ou bipar código de barras..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); if (e.target.value) setCategoriaSel(null); }}
-              onKeyDown={handleSearchKeyDown}
-            />
+            <Input ref={searchInputRef} autoFocus placeholder="Buscar ou bipar código de barras..."
+              value={search} onChange={(e) => { setSearch(e.target.value); if (e.target.value) setCategoriaSel(null); }}
+              onKeyDown={handleSearchKeyDown} />
             {search && (
               <button onClick={() => setSearch("")} className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
                 <X className="h-4 w-4" />
@@ -329,11 +485,8 @@ function PdvPage() {
 
           <div className="flex-1 overflow-auto">
             {products.length === 0 ? (
-              <div className="text-center text-muted-foreground py-10 text-sm">
-                Nenhum produto cadastrado.
-              </div>
+              <div className="text-center text-muted-foreground py-10 text-sm">Nenhum produto cadastrado.</div>
             ) : isUser ? (
-              // Tela simplificada para USER — só busca, sem categorias
               <div>
                 {search ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -412,13 +565,9 @@ function PdvPage() {
                         <div className="text-sm font-medium truncate">{it.name}</div>
                         <div className="text-xs text-muted-foreground tabular-nums">
                           {formatBRL(it.price)} × {it.quantity}
-                          {it.desconto > 0 && (
-                            <span className="ml-1 text-orange-600">− {formatBRL(it.desconto)}</span>
-                          )}
+                          {it.desconto > 0 && <span className="ml-1 text-orange-600">− {formatBRL(it.desconto)}</span>}
                           {" = "}
-                          <span className="font-medium text-foreground">
-                            {formatBRL(it.price * it.quantity - it.desconto)}
-                          </span>
+                          <span className="font-medium text-foreground">{formatBRL(it.price * it.quantity - it.desconto)}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
@@ -439,19 +588,10 @@ function PdvPage() {
                     {podeDesconto && editandoDescontoIdx === i && (
                       <div className="flex items-center gap-2 pt-1">
                         <span className="text-xs text-muted-foreground">Desconto item (R$):</span>
-                        <Input
-                          className="h-6 text-xs w-24"
-                          inputMode="decimal"
-                          placeholder="0,00"
-                          value={descontoItemInput}
-                          onChange={(e) => setDescontoItemInput(e.target.value)}
-                          onBlur={() => {
-                            const v = parseFloat(descontoItemInput.replace(",", ".")) || 0;
-                            setDescontoItem(i, v);
-                            setEditandoDescontoIdx(null);
-                          }}
-                          autoFocus
-                        />
+                        <Input className="h-6 text-xs w-24" inputMode="decimal" placeholder="0,00"
+                          value={descontoItemInput} onChange={(e) => setDescontoItemInput(e.target.value)}
+                          onBlur={() => { const v = parseFloat(descontoItemInput.replace(",", ".")) || 0; setDescontoItem(i, v); setEditandoDescontoIdx(null); }}
+                          autoFocus />
                       </div>
                     )}
                   </li>
@@ -465,28 +605,21 @@ function PdvPage() {
               <div className="flex items-center gap-2">
                 <Percent className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
                 <span className="text-xs text-muted-foreground flex-shrink-0">Desconto geral (R$):</span>
-                <Input
-                  className="h-7 text-xs"
-                  inputMode="decimal"
-                  placeholder="0,00"
-                  value={descontoGeral}
-                  onChange={(e) => setDescontoGeral(e.target.value)}
-                />
+                <Input className="h-7 text-xs" inputMode="decimal" placeholder="0,00"
+                  value={descontoGeral} onChange={(e) => setDescontoGeral(e.target.value)} />
               </div>
             )}
 
             <div className="space-y-1">
               {totalDesconto > 0 && (
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Subtotal</span>
-                  <span className="tabular-nums">{formatBRL(subtotalItens)}</span>
-                </div>
-              )}
-              {totalDesconto > 0 && (
-                <div className="flex justify-between text-xs text-orange-600">
-                  <span>Desconto total</span>
-                  <span className="tabular-nums">− {formatBRL(totalDesconto)}</span>
-                </div>
+                <>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Subtotal</span><span className="tabular-nums">{formatBRL(subtotalItens)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-orange-600">
+                    <span>Desconto total</span><span className="tabular-nums">− {formatBRL(totalDesconto)}</span>
+                  </div>
+                </>
               )}
               <div className="flex items-baseline justify-between">
                 <span className="text-sm text-muted-foreground">Total</span>
@@ -494,19 +627,70 @@ function PdvPage() {
               </div>
             </div>
 
+            {/* Forma de pagamento */}
             <div>
-              <div className="text-xs text-muted-foreground mb-1.5">Forma de pagamento</div>
-              <div className="grid grid-cols-4 gap-1">
-                {(["dinheiro", "credito", "debito", "pix"] as Payment[]).map((m) => (
-                  <button key={m} onClick={() => setPayment(m)}
-                    className={`text-xs font-medium py-2 rounded-md border transition capitalize ${payment === m ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted"}`}>
-                    {m === "credito" ? "Crédito" : m === "debito" ? "Débito" : m === "pix" ? "PIX" : "Dinheiro"}
-                  </button>
-                ))}
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="text-xs text-muted-foreground">Forma de pagamento</div>
+                <button
+                  onClick={() => { setMisto(!misto); }}
+                  className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md border transition-colors ${misto ? "bg-primary text-primary-foreground border-primary" : "text-muted-foreground hover:bg-muted"}`}
+                >
+                  <SplitSquareHorizontal size={12} /> Misto
+                </button>
               </div>
+
+              {!misto ? (
+                <div className="grid grid-cols-4 gap-1">
+                  {(["dinheiro", "credito", "debito", "pix"] as Payment[]).map((m) => (
+                    <button key={m} onClick={() => setPayment(m)}
+                      className={`text-xs font-medium py-2 rounded-md border transition capitalize ${payment === m ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted"}`}>
+                      {PAYMENT_LABELS[m]}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-2 border rounded-lg p-2 bg-muted/20">
+                  {paymentsMisto.map((pm, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <select
+                        value={pm.method}
+                        onChange={(e) => updatePaymentMistoMethod(idx, e.target.value as Payment)}
+                        className="border rounded-md px-2 py-1 text-xs bg-background flex-1"
+                      >
+                        {(["dinheiro", "credito", "debito", "pix"] as Payment[]).map((m) => (
+                          <option key={m} value={m}>{PAYMENT_LABELS[m]}</option>
+                        ))}
+                      </select>
+                      <Input
+                        className="h-7 text-xs w-24"
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        value={pm.amount}
+                        onChange={(e) => handleMistoValueChange(idx, e.target.value)}
+                      />
+                      {paymentsMisto.length > 2 && (
+                        <button onClick={() => removePaymentMisto(idx)} className="text-destructive hover:bg-destructive/10 p-1 rounded">
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button onClick={addPaymentMisto} className="text-xs text-primary hover:underline">
+                    + Adicionar forma
+                  </button>
+                  <div className="flex justify-between text-xs pt-1 border-t">
+                    <span className="text-muted-foreground">Total pago:</span>
+                    <span className={`font-bold ${mistoInsuficiente ? "text-destructive" : "text-emerald-600"}`}>
+                      {formatBRL(totalMisto)}
+                      {mistoInsuficiente && ` (falta ${formatBRL(faltaMisto)})`}
+                      {trocoMisto > 0 && ` (troco ${formatBRL(trocoMisto)})`}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {payment === "dinheiro" && (
+            {!misto && payment === "dinheiro" && (
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">Valor recebido</div>
@@ -530,7 +714,7 @@ function PdvPage() {
             <Button
               className="w-full h-12 text-base font-semibold"
               onClick={finalize}
-              disabled={submitting || !cart.length || insufficient || !caixaAberto}
+              disabled={submitting || !cart.length || (!misto && insufficient) || (misto && totalMisto < total - 0.01) || !caixaAberto}
             >
               {submitting ? "Finalizando..." : "Finalizar venda"}
             </Button>
@@ -554,18 +738,35 @@ function PdvPage() {
       </AlertDialog>
 
       {showAbrirCaixa && (
-        <ModalAbrirCaixa
-          onSuccess={(caixa) => { setCaixaAberto(caixa); setShowAbrirCaixa(false); }}
-          onClose={() => setShowAbrirCaixa(false)}
-        />
+        <ModalAbrirCaixa onSuccess={(caixa) => { setCaixaAberto(caixa); setShowAbrirCaixa(false); }} onClose={() => setShowAbrirCaixa(false)} />
       )}
 
       {showFecharCaixa && resumoCaixa && (
-        <ModalFecharCaixa
-          resumo={resumoCaixa}
+        <ModalFecharCaixa resumo={resumoCaixa}
           onSuccess={() => { setCaixaAberto(null); setShowFecharCaixa(false); setResumoCaixa(null); }}
-          onClose={() => setShowFecharCaixa(false)}
+          onClose={() => setShowFecharCaixa(false)} />
+      )}
+
+      {showSangria && caixaAberto && (
+        <ModalSangria 
+          caixaId={caixaAberto.id}
+          // Puxamos diretamente a coluna que guardámos ao abrir o caixa
+          nomeOperador={caixaAberto.nome_operador || "Operador não identificado"} 
+          onSuccess={(sangria) => { setShowSangria(false); setComprovanteSangria(sangria as SangriaRecibo); }}
+          onClose={() => setShowSangria(false)} 
         />
+      )}
+
+      {comprovanteSangria && (
+        <ComprovanteSangria sangria={comprovanteSangria} onClose={() => setComprovanteSangria(null)} />
+      )}
+
+      {showFechamentoDiario && caixaAberto && (
+        <FechamentoDiarioDialog caixa={caixaAberto} onClose={() => setShowFechamentoDiario(false)} />
+      )}
+
+      {showFechamentoMensal && (
+        <FechamentoMensalDialog onClose={() => setShowFechamentoMensal(false)} />
       )}
     </div>
   );

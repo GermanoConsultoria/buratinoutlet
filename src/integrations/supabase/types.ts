@@ -17,6 +17,7 @@ export type Database = {
           id: string
           aberto_por: string | null
           fechado_por: string | null
+          nome_operador: string | null
           valor_abertura: number
           valor_fechamento: number | null
           observacao_abertura: string | null
@@ -29,6 +30,7 @@ export type Database = {
           id?: string
           aberto_por?: string | null
           fechado_por?: string | null
+          nome_operador?: string | null
           valor_abertura?: number
           valor_fechamento?: number | null
           observacao_abertura?: string | null
@@ -41,6 +43,7 @@ export type Database = {
           id?: string
           aberto_por?: string | null
           fechado_por?: string | null
+          nome_operador?: string | null
           valor_abertura?: number
           valor_fechamento?: number | null
           observacao_abertura?: string | null
@@ -48,6 +51,129 @@ export type Database = {
           aberto_em?: string
           fechado_em?: string | null
           status?: string
+        }
+        Relationships: []
+      }
+      operadores: {
+        Row: {
+          id: string
+          nome: string
+          numero: number
+          ativo: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          nome: string
+          numero: number
+          ativo?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          nome?: string
+          numero?: number
+          ativo?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      fechamento_caixa: {
+        Row: {
+          id: string
+          caixa_id: string | null
+          data_fechamento: string
+          total_vendas: number
+          total_cancelamentos: number
+          total_sangrias: number
+          total_descontos: number
+          qtd_vendas: number
+          qtd_cancelamentos: number
+          qtd_sangrias: number
+          total_dinheiro: number
+          total_credito: number
+          total_debito: number
+          total_pix: number
+          valor_abertura: number
+          valor_fechamento: number | null
+          saldo_esperado: number
+          nome_operador: string | null
+          fechado_por: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          caixa_id?: string | null
+          data_fechamento: string
+          total_vendas?: number
+          total_cancelamentos?: number
+          total_sangrias?: number
+          total_descontos?: number
+          qtd_vendas?: number
+          qtd_cancelamentos?: number
+          qtd_sangrias?: number
+          total_dinheiro?: number
+          total_credito?: number
+          total_debito?: number
+          total_pix?: number
+          valor_abertura?: number
+          valor_fechamento?: number | null
+          saldo_esperado?: number
+          nome_operador?: string | null
+          fechado_por?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          caixa_id?: string | null
+          data_fechamento?: string
+          total_vendas?: number
+          total_cancelamentos?: number
+          total_sangrias?: number
+          total_descontos?: number
+          qtd_vendas?: number
+          qtd_cancelamentos?: number
+          qtd_sangrias?: number
+          total_dinheiro?: number
+          total_credito?: number
+          total_debito?: number
+          total_pix?: number
+          valor_abertura?: number
+          valor_fechamento?: number | null
+          saldo_esperado?: number
+          nome_operador?: string | null
+          fechado_por?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      sangria: {
+        Row: {
+          id: string
+          caixa_id: string | null
+          valor: number
+          motivo: string | null
+          nome_responsavel: string | null
+          realizado_por: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          caixa_id?: string | null
+          valor: number
+          motivo?: string | null
+          nome_responsavel?: string | null
+          realizado_por?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          caixa_id?: string | null
+          valor?: number
+          motivo?: string | null
+          nome_responsavel?: string | null
+          realizado_por?: string | null
+          created_at?: string
         }
         Relationships: []
       }
@@ -195,6 +321,7 @@ export type Database = {
           desconto: number
           id: string
           payment_method: string
+          payment_methods: { method: string; valor: number }[] | null
           receipt_number: number
           total: number
         }
@@ -209,6 +336,7 @@ export type Database = {
           desconto?: number
           id?: string
           payment_method: string
+          payment_methods?: { method: string; valor: number }[] | null
           receipt_number?: number
           total?: number
         }
@@ -223,6 +351,7 @@ export type Database = {
           desconto?: number
           id?: string
           payment_method?: string
+          payment_methods?: { method: string; valor: number }[] | null
           receipt_number?: number
           total?: number
         }

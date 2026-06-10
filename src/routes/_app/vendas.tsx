@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { formatBRL, formatDateTime, paymentLabel } from "@/lib/format";
 import { ReceiptDialog, type Receipt } from "@/components/receipt-dialog";
 import { useAuth } from "@/hooks/use-auth";
-import { isManagerOrOwner, isOwner } from "@/lib/auth";
+import { isManagerOrOwner } from "@/lib/auth";
 
 export const Route = createFileRoute("/_app/vendas")({
   component: VendasPage,
@@ -50,6 +50,7 @@ function VendasPage() {
       created_at: s.created_at,
       total: Number(s.total),
       payment_method: s.payment_method,
+      payment_methods: s.payment_methods ?? undefined, // <-- CORREÇÃO: Passando o detalhe do misto para o cupom
       amount_paid: s.amount_paid != null ? Number(s.amount_paid) : null,
       change_due: Number(s.change_due),
       items: (s.sale_items ?? []).map((i: any) => ({
@@ -92,10 +93,29 @@ function VendasPage() {
   const vendasAtivas = sales.filter((s) => !s.canceled_at);
   const vendasCanceladas = sales.filter((s) => !!s.canceled_at);
   const totalGeral = vendasAtivas.reduce((s, v) => s + Number(v.total), 0);
-  const totalDinheiro = vendasAtivas.filter((v) => v.payment_method === "dinheiro").reduce((s, v) => s + Number(v.total), 0);
-  const totalCredito = vendasAtivas.filter((v) => v.payment_method === "credito").reduce((s, v) => s + Number(v.total), 0);
-  const totalDebito = vendasAtivas.filter((v) => v.payment_method === "debito").reduce((s, v) => s + Number(v.total), 0);
-  const totalPix = vendasAtivas.filter((v) => v.payment_method === "pix").reduce((s, v) => s + Number(v.total), 0);
+  
+  // CORREÇÃO DA MATEMÁTICA: Calculando o Misto nos cards do Histórico
+  let totalDinheiro = 0;
+  let totalCredito = 0;
+  let totalDebito = 0;
+  let totalPix = 0;
+
+  for (const v of vendasAtivas) {
+    if (v.payment_method === "misto" && v.payment_methods) {
+      const methods = v.payment_methods as { method: string; valor: number }[];
+      for (const m of methods) {
+        if (m.method === "dinheiro") totalDinheiro += m.valor;
+        else if (m.method === "credito") totalCredito += m.valor;
+        else if (m.method === "debito") totalDebito += m.valor;
+        else if (m.method === "pix") totalPix += m.valor;
+      }
+    } else {
+      if (v.payment_method === "dinheiro") totalDinheiro += Number(v.total);
+      else if (v.payment_method === "credito") totalCredito += Number(v.total);
+      else if (v.payment_method === "debito") totalDebito += Number(v.total);
+      else if (v.payment_method === "pix") totalPix += Number(v.total);
+    }
+  }
 
   const filtered = sales.filter((s) => {
     if (!search) return true;

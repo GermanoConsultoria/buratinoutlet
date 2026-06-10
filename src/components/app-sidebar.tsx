@@ -48,6 +48,7 @@ const groups: NavGroup[] = [
       { title: "Contas a receber", url: "/financeiro/receber", icon: ArrowDownCircle, modulo: "financeiro" },
       { title: "Balancete", url: "/financeiro/balancete", icon: BarChart3, modulo: "financeiro" },
       { title: "Dashboard", url: "/financeiro/dashboard", icon: Wallet, modulo: "financeiro" },
+      { title: "Relatórios de Caixa", url: "/financeiro/relatorios-caixa", icon: BarChart3, modulo: "financeiro" },
     ],
   },
   {
@@ -55,6 +56,7 @@ const groups: NavGroup[] = [
     items: [
       { title: "Usuários", url: "/config/usuarios", icon: Users, modulo: "configuracoes" },
       { title: "Plano de contas", url: "/config/plano-contas", icon: ListTree, modulo: "configuracoes" },
+      { title: "Operadores", url: "/config/operadores", icon: Users, modulo: "configuracoes" },
     ],
   },
 ];

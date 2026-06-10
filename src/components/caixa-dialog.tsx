@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { X, DollarSign, Lock, Unlock } from "lucide-react";
+import { X, DollarSign, Lock, Unlock, User, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { abrirCaixa, fecharCaixa } from "@/lib/sales.functions";
+import { abrirCaixa, fecharCaixa, listOperadores } from "@/lib/sales.functions";
 import { formatBRL } from "@/lib/format";
 import type { Caixa, ResumoCaixa } from "@/lib/caixa.types";
 
@@ -24,12 +24,26 @@ function formatarMoeda(centavos: number) {
   return (centavos / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+type Operador = { id: string; nome: string; numero: number; ativo: boolean };
+
 export function ModalAbrirCaixa({ onSuccess, onClose }: AbrirProps) {
   const abrir = useServerFn(abrirCaixa);
+  const listarOps = useServerFn(listOperadores);
+
+  const [operadores, setOperadores] = useState<Operador[]>([]);
+  const [operadorSel, setOperadorSel] = useState("");
   const [valorCentavos, setValorCentavos] = useState(0);
   const [valorDisplay, setValorDisplay] = useState("");
   const [observacao, setObservacao] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingOps, setLoadingOps] = useState(true);
+
+  useEffect(() => {
+    listarOps()
+      .then(setOperadores)
+      .catch(() => toast.error("Erro ao carregar operadores"))
+      .finally(() => setLoadingOps(false));
+  }, []);
 
   function handleValor(e: React.ChangeEvent<HTMLInputElement>) {
     const digits = e.target.value.replace(/\D/g, "");
@@ -40,15 +54,19 @@ export function ModalAbrirCaixa({ onSuccess, onClose }: AbrirProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!operadorSel) return toast.error("Selecione o operador responsável.");
     setLoading(true);
+    const op = operadores.find((o) => o.id === operadorSel);
+    const nomeOp = op ? `${op.numero} - ${op.nome}` : "";
     try {
       const caixa = await abrir({
         data: {
+          nome_operador: nomeOp,
           valor_abertura: valorCentavos / 100,
           observacao: observacao.trim() || undefined,
         },
       });
-      toast.success("Caixa aberto com sucesso!");
+      toast.success(`Caixa aberto — Operador: ${nomeOp}!`);
       onSuccess(caixa as Caixa);
     } catch (e) {
       toast.error((e as Error).message);
@@ -71,6 +89,32 @@ export function ModalAbrirCaixa({ onSuccess, onClose }: AbrirProps) {
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
+            <Label className="flex items-center gap-1 mb-1">
+              <User size={13} /> Operador Responsável *
+            </Label>
+            {loadingOps ? (
+              <div className="text-xs text-muted-foreground py-2">Carregando operadores...</div>
+            ) : operadores.length === 0 ? (
+              <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+                Nenhum operador cadastrado. Acesse <strong>Configurações → Operadores</strong> para cadastrar.
+              </div>
+            ) : (
+              <select
+                value={operadorSel}
+                onChange={(e) => setOperadorSel(e.target.value)}
+                className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                autoFocus
+              >
+                <option value="">Selecione o operador...</option>
+                {operadores.map((op) => (
+                  <option key={op.id} value={op.id}>
+                    {op.numero} — {op.nome}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <div>
             <Label>Valor de Abertura (troco inicial)</Label>
             <Input
               type="text"
@@ -78,7 +122,6 @@ export function ModalAbrirCaixa({ onSuccess, onClose }: AbrirProps) {
               value={valorDisplay}
               onChange={handleValor}
               placeholder="R$ 0,00"
-              autoFocus
             />
           </div>
           <div>
@@ -93,7 +136,11 @@ export function ModalAbrirCaixa({ onSuccess, onClose }: AbrirProps) {
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white">
+            <Button
+              type="submit"
+              disabled={loading || !operadorSel || operadores.length === 0}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white"
+            >
               {loading ? "Abrindo..." : "Abrir Caixa"}
             </Button>
           </div>
@@ -113,6 +160,11 @@ export function ModalFecharCaixa({ resumo, onSuccess, onClose }: FecharProps) {
   );
   const [observacao, setObservacao] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const nomeOperador =
+    resumo.caixa.nome_operador ??
+    (resumo.caixa.observacao_abertura?.replace("Operador: ", "")?.split(" | ")[0]) ??
+    "—";
 
   function handleValor(e: React.ChangeEvent<HTMLInputElement>) {
     const digits = e.target.value.replace(/\D/g, "");
@@ -157,7 +209,12 @@ export function ModalFecharCaixa({ resumo, onSuccess, onClose }: FecharProps) {
         </div>
 
         <div className="p-5 space-y-4">
-          {/* Resumo do caixa */}
+          <div className="flex items-center gap-2 bg-muted/40 rounded-lg px-3 py-2">
+            <User size={14} className="text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Operador:</span>
+            <span className="text-sm font-semibold">{nomeOperador}</span>
+          </div>
+
           <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
             <h3 className="text-sm font-semibold mb-3">Resumo do Caixa</h3>
             <div className="grid grid-cols-2 gap-2 text-sm">
@@ -185,9 +242,15 @@ export function ModalFecharCaixa({ resumo, onSuccess, onClose }: FecharProps) {
                 <span className="text-muted-foreground">PIX:</span>
                 <span>{formatBRL(resumo.total_pix)}</span>
               </div>
+              {resumo.total_sangrias > 0 && (
+                <div className="flex justify-between col-span-2 pt-1">
+                  <span className="text-muted-foreground font-medium">Sangrias:</span>
+                  <span className="font-medium text-orange-600">- {formatBRL(resumo.total_sangrias)}</span>
+                </div>
+              )}
             </div>
             <div className="border-t pt-2 mt-2 flex justify-between font-semibold">
-              <span>Saldo esperado:</span>
+              <span>Saldo esperado (Gaveta):</span>
               <span className="text-primary">{formatBRL(resumo.saldo_esperado)}</span>
             </div>
             <p className="text-xs text-muted-foreground">{resumo.qtd_vendas} venda{resumo.qtd_vendas !== 1 ? "s" : ""} realizadas</p>
