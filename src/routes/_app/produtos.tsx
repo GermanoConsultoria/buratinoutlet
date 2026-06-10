@@ -2,14 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useRef } from "react";
-import { listProducts, upsertProduct, deleteProduct, bulkImportProducts, deleteAllProducts } from "@/lib/products.functions";
+import { listProducts, upsertProduct, deleteProduct, bulkImportProducts } from "@/lib/products.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Upload, Pencil, Trash2, Package, FileSpreadsheet } from "lucide-react";
+import { Plus, Download, Pencil, Trash2, Package, FileSpreadsheet } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { formatBRL } from "@/lib/format";
@@ -36,7 +36,6 @@ function ProdutosPage() {
   const upsert = useServerFn(upsertProduct);
   const del = useServerFn(deleteProduct);
   const bulk = useServerFn(bulkImportProducts);
-  const deleteAll = useServerFn(deleteAllProducts);
   const qc = useQueryClient();
 
   const { data: products = [], isLoading } = useQuery({
@@ -49,15 +48,18 @@ function ProdutosPage() {
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
   const [price, setPrice] = useState("");
+  const [cost, setCost] = useState("");
+  const [category, setCategory] = useState("");
+  const [subcategory, setSubcategory] = useState("");
   const [loteInput, setLoteInput] = useState("");
+  const [dataEntrada, setDataEntrada] = useState("");
+  const [endereco, setEndereco] = useState("");
   const [search, setSearch] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("TODAS");
   const [loteFiltro, setLoteFiltro] = useState("TODOS");
-  const [deletingAll, setDeletingAll] = useState(false);
   const [loteImport, setLoteImport] = useState("");
   const [showLoteModal, setShowLoteModal] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const xlsxRef = useRef<HTMLInputElement>(null);
 
   const saveMut = useMutation({
@@ -68,7 +70,12 @@ function ProdutosPage() {
           name,
           sku: sku || null,
           price: parseFloat(price.replace(",", ".")) || 0,
+          cost: parseFloat(cost.replace(",", ".")) || 0,
+          category: category || null,
+          subcategory: subcategory || null,
           lote: loteInput || null,
+          data_entrada: dataEntrada || null,
+          endereco: endereco || null,
         },
       }),
     onSuccess: () => {
@@ -88,23 +95,11 @@ function ProdutosPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const handleDeleteAll = async () => {
-    if (!confirm(`Excluir todos os ${products.length} produtos? Esta ação não pode ser desfeita.`)) return;
-    setDeletingAll(true);
-    try {
-      await deleteAll();
-      toast.success("Todos os produtos foram excluídos.");
-      qc.invalidateQueries({ queryKey: ["products"] });
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setDeletingAll(false);
-    }
-  };
-
   const openNew = () => {
     setEditing(null);
-    setName(""); setSku(""); setPrice(""); setLoteInput("");
+    setName(""); setSku(""); setPrice(""); setCost("");
+    setCategory(""); setSubcategory(""); setLoteInput("");
+    setDataEntrada(""); setEndereco("");
     setOpen(true);
   };
 
@@ -113,41 +108,60 @@ function ProdutosPage() {
     setName(p.name);
     setSku(p.sku ?? "");
     setPrice(String(p.price));
+    setCost(String(p.cost ?? ""));
+    setCategory(p.category ?? "");
+    setSubcategory(p.subcategory ?? "");
     setLoteInput(p.lote ?? "");
+    setDataEntrada(
+      p.data_entrada
+        ? new Date(p.data_entrada).toISOString().split("T")[0]
+        : ""
+    );
+    setEndereco(p.endereco ?? "");
     setOpen(true);
   };
 
-  const handleCsv = async (file: File) => {
-    const text = await file.text();
-    const lines = text.split(/\r?\n/).filter((l) => l.trim());
-    if (!lines.length) return toast.error("CSV vazio");
+  // EXPORTAR CSV no formato de reimportação
+const handleExportCsv = () => {
+  if (products.length === 0) return toast.error("Nenhum produto para exportar.");
 
-    const delim = lines[0].includes(";") ? ";" : ",";
-    const header = lines[0].toLowerCase().split(delim).map((h) => h.trim());
-    const iName = header.findIndex((h) => /nome|name/.test(h));
-    const iPrice = header.findIndex((h) => /preco|preço|price|valor/.test(h));
-    const iSku = header.findIndex((h) => /sku|codigo|código|cod/.test(h));
+  const wsData = (products as Product[]).map((p) => {
+    // Cria array com 19 posições (A=0 até S=18)
+    const row = new Array(19).fill(null);
+    row[3]  = p.sku ?? "";           // D - Código ML
+    row[8]  = p.name;                // I - Descrição
+    row[12] = p.cost ?? 0;           // M - Custo
+    row[13] = p.price;               // N - Venda
+    row[14] = p.category ?? "";      // O - Categoria
+    row[15] = p.subcategory ?? "";   // P - Subcategoria
+    row[16] = p.lote ?? "";          // Q - Lote
+    row[17] = p.endereco ?? "";      // R - Cidade/Endereço
+    row[18] = p.data_entrada         // S - Data entrada
+      ? new Date(p.data_entrada).toLocaleDateString("pt-BR")
+      : "";
+    return row;
+  });
 
-    const hasHeader = iName !== -1 && iPrice !== -1;
-    const rows = (hasHeader ? lines.slice(1) : lines).map((l) => l.split(delim));
+  // Linha de cabeçalho nas posições corretas
+  const header = new Array(19).fill(null);
+  header[3]  = "Código ML";
+  header[8]  = "Descrição do item";
+  header[12] = "Custo";
+  header[13] = "Venda";
+  header[14] = "Categoria";
+  header[15] = "Subcategoria";
+  header[16] = "Lote";
+  header[17] = "Cidade/Endereço";
+  header[18] = "Data de entrada";
 
-    const items = rows
-      .map((r) => ({
-        name: (hasHeader ? r[iName] : r[0])?.trim(),
-        price: parseFloat(((hasHeader ? r[iPrice] : r[1]) ?? "0").replace(",", ".").trim()) || 0,
-        sku: (hasHeader && iSku !== -1 ? r[iSku] : r[2])?.trim() || null,
-      }))
-      .filter((i) => i.name);
+  const ws = XLSX.utils.aoa_to_sheet([header, ...wsData]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Produtos");
+  const data = new Date().toISOString().split("T")[0];
+  XLSX.writeFile(wb, `produtos_backup_${data}.xlsx`);
+  toast.success(`${products.length} produtos exportados!`);
+};
 
-    if (!items.length) return toast.error("Nenhum produto válido encontrado");
-    try {
-      const res = await bulk({ data: { items } });
-      toast.success(`${res.count} produtos importados`);
-      qc.invalidateQueries({ queryKey: ["products"] });
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
-  };
 
   const processXlsx = async (file: File, lote: string) => {
     try {
@@ -172,15 +186,15 @@ function ProdutosPage() {
 
       const items = dataRows
         .map((r) => {
-          const sku         = r[3]  != null ? String(r[3]).trim()  : "";   // D - Código ML
-          const name        = r[8]  != null ? String(r[8]).trim()  : "";   // I - Descrição do item
-          const cost        = typeof r[12] === "number" ? r[12] : 0;       // M - Custo
-          const price       = typeof r[13] === "number" ? r[13] : 0;       // N - Venda
-          const category    = r[14] != null ? String(r[14]).trim() : null; // O - Categoria
-          const subcategory = r[15] != null ? String(r[15]).trim() : null; // P - Subcategoria
-          const loteCol     = r[16] != null ? String(r[16]).trim() : null; // Q - Lote
-          const endereco    = r[17] != null ? String(r[17]).trim() : null; // R - Cidade
-          const dataEntrada = r[18] != null ? String(r[18]).trim() : null; // S - Data de entrada
+          const sku         = r[3]  != null ? String(r[3]).trim()  : "";
+          const name        = r[8]  != null ? String(r[8]).trim()  : "";
+          const cost        = typeof r[12] === "number" ? r[12] : 0;
+          const price       = typeof r[13] === "number" ? r[13] : 0;
+          const category    = r[14] != null ? String(r[14]).trim() : null;
+          const subcategory = r[15] != null ? String(r[15]).trim() : null;
+          const loteCol     = r[16] != null ? String(r[16]).trim() : null;
+          const endereco    = r[17] != null ? String(r[17]).trim() : null;
+          const dataEntrada = r[18] != null ? String(r[18]).trim() : null;
 
           let dataEntradaISO: string | null = null;
           if (dataEntrada) {
@@ -251,26 +265,17 @@ function ProdutosPage() {
               <span className="font-medium text-foreground">
                 {filtered.length !== products.length
                   ? `${filtered.length} de ${products.length} produtos`
-                  : `${products.length} produto${products.length !== 1 ? "s" : ""} cadastrado${products.length !== 1 ? "s" : ""}`}
+                  : `${products.length} produto${products.length !== 1 ? "s" : ""}`}
               </span>
             )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            className="text-destructive border-destructive hover:bg-destructive hover:text-white"
-            onClick={handleDeleteAll}
-            disabled={deletingAll || products.length === 0}
-          >
-            <Trash2 className="h-4 w-4 mr-1" />
-            {deletingAll ? "Excluindo..." : "Limpar tudo"}
+          {/* EXPORTAR CSV */}
+          <Button variant="outline" onClick={handleExportCsv} disabled={products.length === 0}>
+            <Download className="h-4 w-4 mr-1" /> Exportar CSV
           </Button>
-          <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCsv(f); e.target.value = ""; }} />
-          <Button variant="outline" onClick={() => fileRef.current?.click()}>
-            <Upload className="h-4 w-4 mr-1" /> Importar CSV
-          </Button>
+          {/* IMPORTAR PLANILHA */}
           <input ref={xlsxRef} type="file"
             accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             className="hidden"
@@ -283,6 +288,7 @@ function ProdutosPage() {
           <Button variant="outline" onClick={handleXlsxClick}>
             <FileSpreadsheet className="h-4 w-4 mr-1" /> Importar Planilha
           </Button>
+          {/* NOVO PRODUTO */}
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button onClick={openNew}>
@@ -302,13 +308,39 @@ function ProdutosPage() {
                   <Label>Código / SKU</Label>
                   <Input value={sku} onChange={(e) => setSku(e.target.value)} />
                 </div>
-                <div>
-                  <Label>Preço (R$) *</Label>
-                  <Input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0,00" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Preço (R$) *</Label>
+                    <Input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0,00" />
+                  </div>
+                  <div>
+                    <Label>Custo (R$)</Label>
+                    <Input inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0,00" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Categoria</Label>
+                    <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ex: Roupas" />
+                  </div>
+                  <div>
+                    <Label>Subcategoria</Label>
+                    <Input value={subcategory} onChange={(e) => setSubcategory(e.target.value)} placeholder="Ex: Feminino" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Lote</Label>
+                    <Input value={loteInput} onChange={(e) => setLoteInput(e.target.value)} placeholder="Ex: 92" />
+                  </div>
+                  <div>
+                    <Label>Data de Entrada</Label>
+                    <Input type="date" value={dataEntrada} onChange={(e) => setDataEntrada(e.target.value)} />
+                  </div>
                 </div>
                 <div>
-                  <Label>Lote</Label>
-                  <Input value={loteInput} onChange={(e) => setLoteInput(e.target.value)} placeholder="Ex: Lote 92" />
+                  <Label>Endereço / Cidade</Label>
+                  <Input value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Ex: São Paulo" />
                 </div>
               </div>
               <DialogFooter>
@@ -386,9 +418,7 @@ function ProdutosPage() {
                     ) : "—"}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
-                    {p.data_entrada
-                      ? new Date(p.data_entrada).toLocaleDateString("pt-BR")
-                      : "—"}
+                    {p.data_entrada ? new Date(p.data_entrada).toLocaleDateString("pt-BR") : "—"}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs max-w-[120px] truncate">
                     {p.endereco ?? "—"}
