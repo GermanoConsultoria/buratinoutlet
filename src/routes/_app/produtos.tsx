@@ -51,6 +51,8 @@ function ProdutosPage() {
   const [cost, setCost] = useState("");
   const [category, setCategory] = useState("");
   const [subcategory, setSubcategory] = useState("");
+  const [novaCategoria, setNovaCategoria] = useState("");
+  const [novaSubcategoria, setNovaSubcategoria] = useState("");
   const [loteInput, setLoteInput] = useState("");
   const [dataEntrada, setDataEntrada] = useState("");
   const [endereco, setEndereco] = useState("");
@@ -62,6 +64,9 @@ function ProdutosPage() {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const xlsxRef = useRef<HTMLInputElement>(null);
 
+  const categoriaFinal = category === "__nova__" ? novaCategoria : category;
+  const subcategoriaFinal = subcategory === "__nova__" ? novaSubcategoria : subcategory;
+
   const saveMut = useMutation({
     mutationFn: () =>
       upsert({
@@ -71,8 +76,8 @@ function ProdutosPage() {
           sku: sku || null,
           price: parseFloat(price.replace(",", ".")) || 0,
           cost: parseFloat(cost.replace(",", ".")) || 0,
-          category: category || null,
-          subcategory: subcategory || null,
+          category: categoriaFinal || null,
+          subcategory: subcategoriaFinal || null,
           lote: loteInput || null,
           data_entrada: dataEntrada || null,
           endereco: endereco || null,
@@ -100,6 +105,7 @@ function ProdutosPage() {
     setName(""); setSku(""); setPrice(""); setCost("");
     setCategory(""); setSubcategory(""); setLoteInput("");
     setDataEntrada(""); setEndereco("");
+    setNovaCategoria(""); setNovaSubcategoria("");
     setOpen(true);
   };
 
@@ -118,50 +124,42 @@ function ProdutosPage() {
         : ""
     );
     setEndereco(p.endereco ?? "");
+    setNovaCategoria(""); setNovaSubcategoria("");
     setOpen(true);
   };
 
-  // EXPORTAR CSV no formato de reimportação
-const handleExportCsv = () => {
-  if (products.length === 0) return toast.error("Nenhum produto para exportar.");
-
-  const wsData = (products as Product[]).map((p) => {
-    // Cria array com 19 posições (A=0 até S=18)
-    const row = new Array(19).fill(null);
-    row[3]  = p.sku ?? "";           // D - Código ML
-    row[8]  = p.name;                // I - Descrição
-    row[12] = p.cost ?? 0;           // M - Custo
-    row[13] = p.price;               // N - Venda
-    row[14] = p.category ?? "";      // O - Categoria
-    row[15] = p.subcategory ?? "";   // P - Subcategoria
-    row[16] = p.lote ?? "";          // Q - Lote
-    row[17] = p.endereco ?? "";      // R - Cidade/Endereço
-    row[18] = p.data_entrada         // S - Data entrada
-      ? new Date(p.data_entrada).toLocaleDateString("pt-BR")
-      : "";
-    return row;
-  });
-
-  // Linha de cabeçalho nas posições corretas
-  const header = new Array(19).fill(null);
-  header[3]  = "Código ML";
-  header[8]  = "Descrição do item";
-  header[12] = "Custo";
-  header[13] = "Venda";
-  header[14] = "Categoria";
-  header[15] = "Subcategoria";
-  header[16] = "Lote";
-  header[17] = "Cidade/Endereço";
-  header[18] = "Data de entrada";
-
-  const ws = XLSX.utils.aoa_to_sheet([header, ...wsData]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Produtos");
-  const data = new Date().toISOString().split("T")[0];
-  XLSX.writeFile(wb, `produtos_backup_${data}.xlsx`);
-  toast.success(`${products.length} produtos exportados!`);
-};
-
+  const handleExportCsv = () => {
+    if (products.length === 0) return toast.error("Nenhum produto para exportar.");
+    const wsData = (products as Product[]).map((p) => {
+      const row = new Array(19).fill(null);
+      row[3]  = p.sku ?? "";
+      row[8]  = p.name;
+      row[12] = p.cost ?? 0;
+      row[13] = p.price;
+      row[14] = p.category ?? "";
+      row[15] = p.subcategory ?? "";
+      row[16] = p.lote ?? "";
+      row[17] = p.endereco ?? "";
+      row[18] = p.data_entrada ? new Date(p.data_entrada).toLocaleDateString("pt-BR") : "";
+      return row;
+    });
+    const header = new Array(19).fill(null);
+    header[3]  = "Código ML";
+    header[8]  = "Descrição do item";
+    header[12] = "Custo";
+    header[13] = "Venda";
+    header[14] = "Categoria";
+    header[15] = "Subcategoria";
+    header[16] = "Lote";
+    header[17] = "Cidade/Endereço";
+    header[18] = "Data de entrada";
+    const ws = XLSX.utils.aoa_to_sheet([header, ...wsData]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Produtos");
+    const data = new Date().toISOString().split("T")[0];
+    XLSX.writeFile(wb, `produtos_backup_${data}.xlsx`);
+    toast.success(`${products.length} produtos exportados!`);
+  };
 
   const processXlsx = async (file: File, lote: string) => {
     try {
@@ -175,9 +173,9 @@ const handleExportCsv = () => {
 
       let headerIdx = -1;
       for (let i = 0; i < Math.min(rows.length, 15); i++) {
-        const colD = String(rows[i]?.[3] ?? "").toLowerCase();
-        const colI = String(rows[i]?.[8] ?? "").toLowerCase();
-        if (colD.includes("código") || colD.includes("codigo") || colD.includes("cod") || colI.includes("descri")) {
+        const colD = String(rows[i]?.[3] ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const colI = String(rows[i]?.[8] ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        if (colD.includes("codigo") || colD.includes("cod") || colD.includes("sku") || colI.includes("descri") || colI.includes("item")) {
           headerIdx = i; break;
         }
       }
@@ -186,10 +184,10 @@ const handleExportCsv = () => {
 
       const items = dataRows
         .map((r) => {
-          const sku         = r[3]  != null ? String(r[3]).trim()  : "";
+          const sku         = r[4] != null ? String(r[4]).trim() : (r[3] != null ? String(r[3]).trim() : "");
           const name        = r[8]  != null ? String(r[8]).trim()  : "";
-          const cost        = typeof r[12] === "number" ? r[12] : 0;
-          const price       = typeof r[13] === "number" ? r[13] : 0;
+          const cost        = typeof r[12] === "number" ? r[12] : (typeof r[12] === "string" && r[12].startsWith("=") ? 0 : parseFloat(String(r[12] || "0")) || 0);
+          const price       = typeof r[13] === "number" ? r[13] : (typeof r[13] === "string" && r[13].startsWith("=") ? 0 : parseFloat(String(r[13] || "0")) || 0);
           const category    = r[14] != null ? String(r[14]).trim() : null;
           const subcategory = r[15] != null ? String(r[15]).trim() : null;
           const loteCol     = r[16] != null ? String(r[16]).trim() : null;
@@ -227,7 +225,7 @@ const handleExportCsv = () => {
             data_entrada: dataEntradaISO,
           };
         })
-        .filter((i) => i.name && i.price > 0);
+        .filter((i) => i.name && i.name.length > 0);
 
       if (!items.length) return toast.error("Nenhum produto válido na planilha");
       const res = await bulk({ data: { items, lote: lote || null } });
@@ -242,6 +240,13 @@ const handleExportCsv = () => {
 
   const categorias = [...new Set(products.map((p) => (p as any).category).filter(Boolean))].sort() as string[];
   const lotes = [...new Set(products.map((p) => (p as any).lote).filter(Boolean))].sort() as string[];
+
+  const subcategoriasDaCategoria = [...new Set(
+    (products as Product[])
+      .filter((p) => p.category === categoriaFinal)
+      .map((p) => p.subcategory)
+      .filter(Boolean)
+  )].sort() as string[];
 
   const filtered = products.filter((p: any) => {
     const matchSearch =
@@ -271,11 +276,9 @@ const handleExportCsv = () => {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {/* EXPORTAR CSV */}
           <Button variant="outline" onClick={handleExportCsv} disabled={products.length === 0}>
             <Download className="h-4 w-4 mr-1" /> Exportar CSV
           </Button>
-          {/* IMPORTAR PLANILHA */}
           <input ref={xlsxRef} type="file"
             accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             className="hidden"
@@ -288,7 +291,6 @@ const handleExportCsv = () => {
           <Button variant="outline" onClick={handleXlsxClick}>
             <FileSpreadsheet className="h-4 w-4 mr-1" /> Importar Planilha
           </Button>
-          {/* NOVO PRODUTO */}
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button onClick={openNew}>
@@ -321,11 +323,49 @@ const handleExportCsv = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>Categoria</Label>
-                    <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ex: Roupas" />
+                    <select
+                      value={category}
+                      onChange={(e) => { setCategory(e.target.value); setSubcategory(""); setNovaCategoria(""); setNovaSubcategoria(""); }}
+                      className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                    >
+                      <option value="">Selecione...</option>
+                      {categorias.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                      <option value="__nova__">+ Nova categoria...</option>
+                    </select>
+                    {category === "__nova__" && (
+                      <Input
+                        className="mt-1"
+                        placeholder="Digite a nova categoria"
+                        value={novaCategoria}
+                        onChange={(e) => setNovaCategoria(e.target.value)}
+                        autoFocus
+                      />
+                    )}
                   </div>
                   <div>
                     <Label>Subcategoria</Label>
-                    <Input value={subcategory} onChange={(e) => setSubcategory(e.target.value)} placeholder="Ex: Feminino" />
+                    <select
+                      value={subcategory}
+                      onChange={(e) => { setSubcategory(e.target.value); setNovaSubcategoria(""); }}
+                      className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                    >
+                      <option value="">Selecione...</option>
+                      {subcategoriasDaCategoria.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                      <option value="__nova__">+ Nova subcategoria...</option>
+                    </select>
+                    {subcategory === "__nova__" && (
+                      <Input
+                        className="mt-1"
+                        placeholder="Digite a nova subcategoria"
+                        value={novaSubcategoria}
+                        onChange={(e) => setNovaSubcategoria(e.target.value)}
+                        autoFocus
+                      />
+                    )}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -386,6 +426,7 @@ const handleExportCsv = () => {
                 <TableHead>Nome</TableHead>
                 <TableHead>Código</TableHead>
                 <TableHead>Categoria</TableHead>
+                <TableHead>Subcategoria</TableHead>
                 <TableHead>Lote</TableHead>
                 <TableHead>Entrada</TableHead>
                 <TableHead>Endereço</TableHead>
@@ -397,12 +438,12 @@ const handleExportCsv = () => {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
+                  <TableCell colSpan={10} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
                 </TableRow>
               )}
               {!isLoading && filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">Nenhum produto encontrado.</TableCell>
+                  <TableCell colSpan={10} className="text-center text-muted-foreground py-8">Nenhum produto encontrado.</TableCell>
                 </TableRow>
               )}
               {filtered.map((p: any) => (
@@ -410,6 +451,7 @@ const handleExportCsv = () => {
                   <TableCell className="font-medium">{p.name}</TableCell>
                   <TableCell className="text-muted-foreground">{p.sku ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{p.category ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{p.subcategory ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {p.lote ? (
                       <span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary border border-primary/20 font-medium">
