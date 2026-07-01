@@ -184,7 +184,7 @@ function ProdutosPage() {
 
       const items = dataRows
         .map((r) => {
-          const sku         = r[4] != null ? String(r[4]).trim() : (r[3] != null ? String(r[3]).trim() : "");
+          const sku         = r[3] != null ? String(r[3]).trim() : (r[4] != null ? String(r[4]).trim() : "");
           const name        = r[8]  != null ? String(r[8]).trim()  : "";
           const cost        = typeof r[12] === "number" ? r[12] : (typeof r[12] === "string" && r[12].startsWith("=") ? 0 : parseFloat(String(r[12] || "0")) || 0);
           const price       = typeof r[13] === "number" ? r[13] : (typeof r[13] === "string" && r[13].startsWith("=") ? 0 : parseFloat(String(r[13] || "0")) || 0);
