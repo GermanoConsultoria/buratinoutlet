@@ -99,13 +99,31 @@ export const bulkImportProducts = createServerFn({ method: "POST" })
       created_by: context.userId,
     }));
 
+    const { data: existing, error: fetchError } = await context.supabase
+      .from("products")
+      .select("sku, name");
+    if (fetchError) throw new Error(fetchError.message);
+
+    const existingSet = new Set(
+      (existing ?? []).map((p: any) =>
+        `${(p.sku ?? "").trim().toLowerCase()}||${p.name.trim().toLowerCase()}`
+      )
+    );
+
+    const newRows = rows.filter((r) => {
+      const key = `${(r.sku ?? "").trim().toLowerCase()}||${r.name.trim().toLowerCase()}`;
+      return !existingSet.has(key);
+    });
+
+    if (newRows.length === 0) return { ok: true, count: 0, skipped: rows.length };
+
     const chunk = 500;
     let count = 0;
-    for (let i = 0; i < rows.length; i += chunk) {
-      const slice = rows.slice(i, i + chunk);
+    for (let i = 0; i < newRows.length; i += chunk) {
+      const slice = newRows.slice(i, i + chunk);
       const { error } = await context.supabase.from("products").insert(slice);
       if (error) throw new Error(error.message);
       count += slice.length;
     }
-    return { ok: true, count };
+    return { ok: true, count, skipped: rows.length - count };
   });
