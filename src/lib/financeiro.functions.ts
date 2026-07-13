@@ -262,6 +262,34 @@ export const excluirEAvancarRecorrencia = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const getSugestoesFinanceiras = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({ tipo: z.enum(["DESPESA", "RECEITA"]) }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { data: registros, error } = await context.supabase
+      .from("lancamento_financeiro")
+      .select("descricao, beneficiario")
+      .eq("tipo", data.tipo)
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+    if (error) throw new Error(error.message);
+
+    const descSet = new Set<string>();
+    const benSet = new Set<string>();
+    for (const r of registros ?? []) {
+      if (r.descricao) descSet.add(r.descricao);
+      if (r.beneficiario) benSet.add(r.beneficiario);
+    }
+
+    return {
+      descricoes: Array.from(descSet).sort((a, b) => a.localeCompare(b, "pt-BR")),
+      beneficiarios: Array.from(benSet).sort((a, b) => a.localeCompare(b, "pt-BR")),
+    };
+  });
+
 export const getBalancete = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>

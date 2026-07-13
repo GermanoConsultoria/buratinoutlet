@@ -13,6 +13,11 @@ const productInput = z.object({
   lote: z.string().max(60).nullable().optional(),
   data_entrada: z.string().nullable().optional(),
   endereco: z.string().max(300).nullable().optional(),
+  // Classificação fiscal para emissão de NFC-e
+  ncm: z.string().max(8).nullable().optional(),
+  cfop: z.string().max(10).nullable().optional(),
+  icms_origem: z.string().max(1).nullable().optional(),
+  icms_situacao_tributaria: z.string().max(10).nullable().optional(),
 });
 
 export const listProducts = createServerFn({ method: "GET" })
@@ -25,7 +30,7 @@ export const listProducts = createServerFn({ method: "GET" })
     while (true) {
       const { data, error } = await context.supabase
         .from("products")
-        .select("id, name, sku, price, cost, category, subcategory, lote, data_entrada, endereco, created_at")
+        .select("id, name, sku, price, cost, category, subcategory, lote, data_entrada, endereco, ncm, cfop, icms_origem, icms_situacao_tributaria, created_at")
         .order("name")
         .range(from, from + pageSize - 1);
 
@@ -56,13 +61,22 @@ export const upsertProduct = createServerFn({ method: "POST" })
       endereco: data.endereco?.trim() || null,
       updated_at: new Date().toISOString(),
     };
+    // Campos fiscais para NFC-e (não estão no tipo gerado do Supabase ainda)
+    const fiscalRow = {
+      ncm: data.ncm?.trim() || null,
+      cfop: data.cfop?.trim() || null,
+      icms_origem: data.icms_origem ?? null,
+      icms_situacao_tributaria: data.icms_situacao_tributaria?.trim() || null,
+    };
     if (data.id) {
-      const { error } = await context.supabase.from("products").update(row).eq("id", data.id);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await context.supabase.from("products").update({ ...row, ...fiscalRow } as any).eq("id", data.id);
       if (error) throw new Error(error.message);
     } else {
       const { error } = await context.supabase
         .from("products")
-        .insert({ ...row, created_by: context.userId });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert({ ...row, ...fiscalRow, created_by: context.userId } as any);
       if (error) throw new Error(error.message);
     }
     return { ok: true };
@@ -96,6 +110,10 @@ export const bulkImportProducts = createServerFn({ method: "POST" })
       lote: data.lote?.trim() || i.lote?.trim() || null,
       data_entrada: i.data_entrada ?? new Date().toISOString(),
       endereco: i.endereco?.trim() || null,
+      ncm: i.ncm?.trim() || null,
+      cfop: i.cfop?.trim() || null,
+      icms_origem: i.icms_origem ?? null,
+      icms_situacao_tributaria: i.icms_situacao_tributaria?.trim() || null,
       created_by: context.userId,
     }));
 
@@ -121,7 +139,8 @@ export const bulkImportProducts = createServerFn({ method: "POST" })
     let count = 0;
     for (let i = 0; i < newRows.length; i += chunk) {
       const slice = newRows.slice(i, i + chunk);
-      const { error } = await context.supabase.from("products").insert(slice);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await context.supabase.from("products").insert(slice as any);
       if (error) throw new Error(error.message);
       count += slice.length;
     }

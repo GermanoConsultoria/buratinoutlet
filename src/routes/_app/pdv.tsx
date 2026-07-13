@@ -3,14 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import { listProducts } from "@/lib/products.functions";
-import { createSale, getCaixaAberto, listSales, listSangrias } from "@/lib/sales.functions";
+import { createSale, getCaixaAberto, listSales, listSangrias, getFocusNfeStatus, emitirNfceVenda } from "@/lib/sales.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import {
   ShoppingCart, Plus, Minus, X, Search, Barcode,
   ChevronLeft, Tag, Lock, Unlock, Percent, ArrowDownCircle, FileText, SplitSquareHorizontal,
+  CheckCircle2, AlertCircle, ExternalLink, Loader2,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { formatBRL } from "@/lib/format";
 import { ReceiptDialog, type Receipt } from "@/components/receipt-dialog";
@@ -60,12 +62,20 @@ type SangriaRecibo = {
   caixa_id: string | null;
 };
 
+type NfceState =
+  | null
+  | { fase: "emitindo" }
+  | { fase: "autorizado"; chave: string; numero: string; serie: string; danfe_url: string | null; qrcode_url: string | null; receiptNumber: number }
+  | { fase: "erro"; mensagem_sefaz: string; cupomReceipt: Receipt; receiptNumber: number };
+
 function PdvPage() {
   const list = useServerFn(listProducts);
   const sell = useServerFn(createSale);
   const getCaixa = useServerFn(getCaixaAberto);
   const getSales = useServerFn(listSales);
   const getSangrias = useServerFn(listSangrias);
+  const getNfceStatus = useServerFn(getFocusNfeStatus);
+  const emitirNfceServer = useServerFn(emitirNfceVenda);
   const { profile } = useAuth();
 
   const podeDesconto = isManagerOrOwner(profile);
@@ -86,6 +96,9 @@ function PdvPage() {
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [printPrompt, setPrintPrompt] = useState<Receipt | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [tipoDocumento, setTipoDocumento] = useState<"cupom" | "nfce">("cupom");
+  const [focusNfeConfigurado, setFocusNfeConfigurado] = useState(false);
+  const [nfceState, setNfceState] = useState<NfceState>(null);
   const [barcodeFlash, setBarcodeFlash] = useState<string | null>(null);
   const [descontoGeral, setDescontoGeral] = useState("");
   const [editandoDescontoIdx, setEditandoDescontoIdx] = useState<number | null>(null);
@@ -113,6 +126,10 @@ function PdvPage() {
       setCaixaAberto(c as Caixa | null);
       setCaixaLoading(false);
     }).catch(() => setCaixaLoading(false));
+  }, []);
+
+  useEffect(() => {
+    getNfceStatus().then((s) => setFocusNfeConfigurado(s.configurado)).catch(() => {});
   }, []);
 
   async function handleFecharCaixaClick() {
@@ -345,7 +362,7 @@ function PdvPage() {
     if (misto && mistoInsuficiente) return toast.error(`Falta ${formatBRL(faltaMisto)} para completar o pagamento`);
 
     setSubmitting(true);
-    
+
     // Converte os dados do misto para o formato esperado pelo backend
     const processadosMisto = paymentsMisto
       .map(p => ({
@@ -372,6 +389,7 @@ function PdvPage() {
         },
       });
 
+      // Captura o receipt ANTES de resetar o cart (usado como fallback no erro de NFC-e)
       const built: Receipt = {
         receipt_number: res.receipt_number,
         created_at: res.created_at,
@@ -383,13 +401,48 @@ function PdvPage() {
         payment_methods: misto ? processadosMisto.map((p) => ({ method: p.method as string, valor: p.valor })) : undefined,
         desconto_geral: descontoGeralNum > 0 ? descontoGeralNum : undefined,
       };
-      setPrintPrompt(built);
+
       setCart([]);
       setPaid("");
       setDescontoGeral("");
       setMisto(false);
       setPaymentsMisto([{ method: "dinheiro", amount: "" }, { method: "credito", amount: "" }]);
-      toast.success(`Venda #${res.receipt_number} registrada`);
+
+      if (tipoDocumento === "nfce") {
+        toast.success(`Venda #${res.receipt_number} registrada`);
+        setNfceState({ fase: "emitindo" });
+        try {
+          const resultado = await emitirNfceServer({ data: { saleId: res.id } });
+          if (resultado.ok) {
+            setNfceState({
+              fase: "autorizado",
+              chave: resultado.chave,
+              numero: resultado.numero,
+              serie: resultado.serie,
+              danfe_url: resultado.danfe_url,
+              qrcode_url: resultado.qrcode_url,
+              receiptNumber: res.receipt_number,
+            });
+          } else {
+            setNfceState({
+              fase: "erro",
+              mensagem_sefaz: resultado.mensagem_sefaz,
+              cupomReceipt: built,
+              receiptNumber: res.receipt_number,
+            });
+          }
+        } catch (e) {
+          setNfceState({
+            fase: "erro",
+            mensagem_sefaz: (e as Error).message,
+            cupomReceipt: built,
+            receiptNumber: res.receipt_number,
+          });
+        }
+      } else {
+        setPrintPrompt(built);
+        toast.success(`Venda #${res.receipt_number} registrada`);
+      }
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -705,6 +758,43 @@ function PdvPage() {
               </div>
             )}
 
+            {/* Tipo de Documento */}
+            <div>
+              <div className="text-xs text-muted-foreground mb-1.5">Tipo de documento</div>
+              <div className="grid grid-cols-2 gap-1">
+                <button
+                  onClick={() => setTipoDocumento("cupom")}
+                  className={`text-xs font-medium py-2 rounded-md border transition ${tipoDocumento === "cupom" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted"}`}
+                >
+                  Cupom Não Fiscal
+                </button>
+                {focusNfeConfigurado ? (
+                  <button
+                    onClick={() => setTipoDocumento("nfce")}
+                    className={`text-xs font-medium py-2 rounded-md border transition ${tipoDocumento === "nfce" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted"}`}
+                  >
+                    Nota Fiscal
+                  </button>
+                ) : (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="w-full">
+                          <button
+                            disabled
+                            className="w-full text-xs font-medium py-2 rounded-md border bg-muted text-muted-foreground cursor-not-allowed"
+                          >
+                            Nota Fiscal
+                          </button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>Integração ainda não configurada</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
+            </div>
+
             {!caixaAberto && !caixaLoading && (
               <div className="text-xs text-center text-red-600 bg-red-50 border border-red-200 rounded-lg py-2 px-3">
                 Abra o caixa para realizar vendas
@@ -716,7 +806,7 @@ function PdvPage() {
               onClick={finalize}
               disabled={submitting || !cart.length || (!misto && insufficient) || (misto && totalMisto < total - 0.01) || !caixaAberto}
             >
-              {submitting ? "Finalizando..." : "Finalizar venda"}
+              {submitting ? "Finalizando..." : tipoDocumento === "nfce" ? "Emitir Nota Fiscal" : "Finalizar venda"}
             </Button>
           </div>
         </Card>
@@ -768,6 +858,99 @@ function PdvPage() {
       {showFechamentoMensal && (
         <FechamentoMensalDialog onClose={() => setShowFechamentoMensal(false)} />
       )}
+
+      {/* Diálogo de emissão / resultado da NFC-e */}
+      <AlertDialog
+        open={nfceState !== null}
+        onOpenChange={(open) => {
+          // Não fecha enquanto estiver emitindo
+          if (!open && nfceState?.fase !== "emitindo") setNfceState(null);
+        }}
+      >
+        <AlertDialogContent>
+          {nfceState?.fase === "emitindo" && (
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                Emitindo nota fiscal...
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Comunicando com a SEFAZ via Focus NFe. Aguarde — isso pode levar alguns segundos.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+          )}
+
+          {nfceState?.fase === "autorizado" && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2 text-emerald-600">
+                  <CheckCircle2 className="h-5 w-5" />
+                  NFC-e emitida com sucesso!
+                </AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                  <div className="space-y-1.5 text-sm">
+                    <p>
+                      <span className="font-medium">Venda #{nfceState.receiptNumber}</span>
+                      {" · "}NF nº {nfceState.numero}
+                      {nfceState.numero && nfceState.serie ? ` · Série ${nfceState.serie}` : ""}
+                    </p>
+                    {nfceState.chave && (
+                      <p className="text-xs text-muted-foreground break-all font-mono">
+                        Chave: {nfceState.chave}
+                      </p>
+                    )}
+                    {nfceState.qrcode_url && (
+                      <p className="text-xs text-muted-foreground">
+                        QR Code disponível no DANFCe.
+                      </p>
+                    )}
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                {nfceState.danfe_url && (
+                  <AlertDialogAction asChild>
+                    <a href={nfceState.danfe_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5">
+                      <ExternalLink className="h-4 w-4" />
+                      Ver DANFCe / Imprimir
+                    </a>
+                  </AlertDialogAction>
+                )}
+                <AlertDialogAction onClick={() => setNfceState(null)}>Fechar</AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
+
+          {nfceState?.fase === "erro" && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="h-5 w-5" />
+                  Erro na emissão da NFC-e
+                </AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                  <div className="space-y-2 text-sm">
+                    <p className="font-medium text-destructive">{nfceState.mensagem_sefaz}</p>
+                    <p className="text-xs text-muted-foreground border-t pt-2">
+                      A <span className="font-semibold">Venda #{nfceState.receiptNumber} já foi registrada</span> e não será perdida.
+                      Você pode imprimir o cupom não fiscal enquanto o problema é resolvido.
+                    </p>
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setNfceState(null)}>Fechar</AlertDialogCancel>
+                <AlertDialogAction onClick={() => {
+                  setReceipt(nfceState.cupomReceipt);
+                  setNfceState(null);
+                }}>
+                  Imprimir Cupom Não Fiscal
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

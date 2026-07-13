@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { getSugestoesFinanceiras } from "@/lib/financeiro.functions";
 import LancamentosView from "@/components/financeiro/lancamentos-view";
 
 const getContasAPagar = createServerFn({ method: "GET" })
@@ -36,12 +37,18 @@ const getContasAPagar = createServerFn({ method: "GET" })
   });
 
 export const Route = createFileRoute("/_app/financeiro/pagar")({
-  loader: () => getContasAPagar(),
+  loader: async () => {
+    const [dados, sugestoes] = await Promise.all([
+      getContasAPagar(),
+      getSugestoesFinanceiras({ data: { tipo: "DESPESA" } }),
+    ]);
+    return { ...dados, ...sugestoes };
+  },
   component: ContasAPagarPage,
 });
 
 function ContasAPagarPage() {
-  const { lancamentos, planoContas } = Route.useLoaderData();
+  const { lancamentos, planoContas, descricoes, beneficiarios } = Route.useLoaderData();
 
   return (
     <div className="space-y-4">
@@ -53,6 +60,8 @@ function ContasAPagarPage() {
         lancamentos={lancamentos as never}
         planoContas={planoContas}
         tipo="DESPESA"
+        sugestoesDescricao={descricoes}
+        sugestoesBeneficiario={beneficiarios}
       />
     </div>
   );

@@ -464,3 +464,24 @@ export const deletarOperador = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ============================================================
+// FOCUS NFe
+// ============================================================
+
+export const getFocusNfeStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    // Importação dinâmica garante que focus-nfe.server.ts nunca chegue ao bundle do cliente
+    const { isFocusNfeConfigurado } = await import("@/lib/focus-nfe.server");
+    return { configurado: isFocusNfeConfigurado() };
+  });
+
+export const emitirNfceVenda = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ saleId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { emitirNfce } = await import("@/lib/focus-nfe.server");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return emitirNfce(data.saleId, context.supabase as any);
+  });

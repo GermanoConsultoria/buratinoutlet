@@ -44,6 +44,8 @@ interface Props {
   lancamentos: LancamentoComRelacoes[];
   planoContas: PlanoContas[];
   tipo: TipoLancamento;
+  sugestoesDescricao: string[];
+  sugestoesBeneficiario: string[];
 }
 
 const STATUS_LABEL: Record<StatusLancamento, string> = {
@@ -135,7 +137,7 @@ function formatarData(data: string) {
   return new Date(data).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
-export default function LancamentosView({ lancamentos: inicial, planoContas, tipo }: Props) {
+export default function LancamentosView({ lancamentos: inicial, planoContas, tipo, sugestoesDescricao, sugestoesBeneficiario }: Props) {
   const getList = useServerFn(getLancamentosFinanceiros);
   const pagar = useServerFn(pagarLancamento);
   const cancelar = useServerFn(cancelarLancamento);
@@ -353,6 +355,8 @@ export default function LancamentosView({ lancamentos: inicial, planoContas, tip
           tipo={tipo}
           planoContas={planoContas}
           lancamento={editando ?? undefined}
+          sugestoesDescricao={sugestoesDescricao}
+          sugestoesBeneficiario={sugestoesBeneficiario}
           onClose={() => { setShowModal(false); setEditando(null); }}
           onSuccess={recarregar}
         />

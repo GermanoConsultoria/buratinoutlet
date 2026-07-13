@@ -17,8 +17,109 @@ interface Props {
   tipo: TipoLancamento;
   planoContas: PlanoContas[];
   lancamento?: LancamentoComRelacoes;
+  sugestoesDescricao: string[];
+  sugestoesBeneficiario: string[];
   onClose: () => void;
   onSuccess: () => void;
+}
+
+interface SeletorProps {
+  valor: string;
+  onChange: (v: string) => void;
+  sugestoes: string[];
+  onCadastrar: (v: string) => void;
+  placeholder?: string;
+  labelBotao: string;
+  autoFocus?: boolean;
+}
+
+function SeletorComCadastro({
+  valor,
+  onChange,
+  sugestoes,
+  onCadastrar,
+  placeholder,
+  labelBotao,
+  autoFocus,
+}: SeletorProps) {
+  const [modo, setModo] = useState<"sel" | "cad">("sel");
+  const [novo, setNovo] = useState("");
+
+  function confirmar() {
+    const v = novo.trim();
+    if (!v) return;
+    onCadastrar(v);
+    onChange(v);
+    setNovo("");
+    setModo("sel");
+  }
+
+  if (modo === "cad") {
+    return (
+      <div className="flex gap-2 mt-1">
+        <Input
+          value={novo}
+          onChange={(e) => setNovo(e.target.value)}
+          placeholder={placeholder}
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              confirmar();
+            }
+            if (e.key === "Escape") {
+              setModo("sel");
+              setNovo("");
+            }
+          }}
+          className="flex-1"
+        />
+        <button
+          type="button"
+          onClick={confirmar}
+          className="text-xs px-3 border rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity whitespace-nowrap"
+        >
+          Adicionar
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setModo("sel");
+            setNovo("");
+          }}
+          className="text-xs px-3 border rounded-md text-muted-foreground hover:bg-muted transition-colors"
+        >
+          Cancelar
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-2 mt-1">
+      <select
+        value={valor}
+        onChange={(e) => onChange(e.target.value)}
+        // eslint-disable-next-line jsx-a11y/no-autofocus
+        autoFocus={autoFocus}
+        className="flex-1 border rounded-md px-3 py-2 text-sm bg-background"
+      >
+        <option value="">Selecione...</option>
+        {sugestoes.map((s) => (
+          <option key={s} value={s}>
+            {s}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        onClick={() => setModo("cad")}
+        className="text-xs px-3 border rounded-md text-primary hover:bg-primary/5 transition-colors whitespace-nowrap"
+      >
+        {labelBotao}
+      </button>
+    </div>
+  );
 }
 
 function formatarMoeda(centavos: number) {
@@ -28,10 +129,17 @@ function formatarMoeda(centavos: number) {
   });
 }
 
+function listaComValorAtual(sugestoes: string[], valorAtual: string | null | undefined) {
+  if (!valorAtual || sugestoes.includes(valorAtual)) return sugestoes;
+  return [...sugestoes, valorAtual].sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
 export default function ModalLancamento({
   tipo,
   planoContas,
   lancamento,
+  sugestoesDescricao,
+  sugestoesBeneficiario,
   onClose,
   onSuccess,
 }: Props) {
@@ -69,11 +177,30 @@ export default function ModalLancamento({
     lancamento?.plano_contas_id ?? ""
   );
 
+  const [listaDescricoes, setListaDescricoes] = useState<string[]>(() =>
+    listaComValorAtual(sugestoesDescricao, lancamento?.descricao)
+  );
+  const [listaBeneficiarios, setListaBeneficiarios] = useState<string[]>(() =>
+    listaComValorAtual(sugestoesBeneficiario, lancamento?.beneficiario)
+  );
+
   function handleValorChange(e: React.ChangeEvent<HTMLInputElement>) {
     const apenasDigitos = e.target.value.replace(/\D/g, "");
     const centavos = parseInt(apenasDigitos || "0", 10);
     setValorCentavos(centavos);
     setValorDisplay(centavos > 0 ? formatarMoeda(centavos) : "");
+  }
+
+  function adicionarDescricao(v: string) {
+    setListaDescricoes((prev) =>
+      prev.includes(v) ? prev : [...prev, v].sort((a, b) => a.localeCompare(b, "pt-BR"))
+    );
+  }
+
+  function adicionarBeneficiario(v: string) {
+    setListaBeneficiarios((prev) =>
+      prev.includes(v) ? prev : [...prev, v].sort((a, b) => a.localeCompare(b, "pt-BR"))
+    );
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -143,14 +270,17 @@ export default function ModalLancamento({
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
             <Label>Descrição *</Label>
-            <Input
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
+            <SeletorComCadastro
+              valor={descricao}
+              onChange={setDescricao}
+              sugestoes={listaDescricoes}
+              onCadastrar={adicionarDescricao}
               placeholder={
                 tipo === "DESPESA"
                   ? "Ex: Aluguel do escritório"
                   : "Ex: Pagamento de consultoria"
               }
+              labelBotao="Cadastrar Descrição"
               autoFocus
             />
           </div>
@@ -158,10 +288,13 @@ export default function ModalLancamento({
           {tipo === "DESPESA" && (
             <div>
               <Label>Beneficiário</Label>
-              <Input
-                value={beneficiario}
-                onChange={(e) => setBeneficiario(e.target.value)}
+              <SeletorComCadastro
+                valor={beneficiario}
+                onChange={setBeneficiario}
+                sugestoes={listaBeneficiarios}
+                onCadastrar={adicionarBeneficiario}
                 placeholder="Ex: Fornecedor XYZ"
+                labelBotao="Cadastrar Beneficiário"
               />
             </div>
           )}

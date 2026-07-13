@@ -29,6 +29,10 @@ type Product = {
   lote?: string | null;
   data_entrada?: string | null;
   endereco?: string | null;
+  ncm?: string | null;
+  cfop?: string | null;
+  icms_origem?: string | null;
+  icms_situacao_tributaria?: string | null;
 };
 
 function ProdutosPage() {
@@ -56,6 +60,10 @@ function ProdutosPage() {
   const [loteInput, setLoteInput] = useState("");
   const [dataEntrada, setDataEntrada] = useState("");
   const [endereco, setEndereco] = useState("");
+  const [ncm, setNcm] = useState("");
+  const [cfop, setCfop] = useState("");
+  const [icmsOrigem, setIcmsOrigem] = useState("0");
+  const [icmsSituacao, setIcmsSituacao] = useState("");
   const [search, setSearch] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("TODAS");
   const [loteFiltro, setLoteFiltro] = useState("TODOS");
@@ -81,6 +89,10 @@ function ProdutosPage() {
           lote: loteInput || null,
           data_entrada: dataEntrada || null,
           endereco: endereco || null,
+          ncm: ncm || null,
+          cfop: cfop || null,
+          icms_origem: icmsOrigem || null,
+          icms_situacao_tributaria: icmsSituacao || null,
         },
       }),
     onSuccess: () => {
@@ -106,6 +118,7 @@ function ProdutosPage() {
     setCategory(""); setSubcategory(""); setLoteInput("");
     setDataEntrada(""); setEndereco("");
     setNovaCategoria(""); setNovaSubcategoria("");
+    setNcm(""); setCfop(""); setIcmsOrigem("0"); setIcmsSituacao("");
     setOpen(true);
   };
 
@@ -125,13 +138,17 @@ function ProdutosPage() {
     );
     setEndereco(p.endereco ?? "");
     setNovaCategoria(""); setNovaSubcategoria("");
+    setNcm(p.ncm ?? "");
+    setCfop(p.cfop ?? "");
+    setIcmsOrigem(p.icms_origem ?? "0");
+    setIcmsSituacao(p.icms_situacao_tributaria ?? "");
     setOpen(true);
   };
 
   const handleExportCsv = () => {
     if (products.length === 0) return toast.error("Nenhum produto para exportar.");
     const wsData = (products as Product[]).map((p) => {
-      const row = new Array(19).fill(null);
+      const row = new Array(23).fill(null);
       row[3]  = p.sku ?? "";
       row[8]  = p.name;
       row[12] = p.cost ?? 0;
@@ -141,9 +158,13 @@ function ProdutosPage() {
       row[16] = p.lote ?? "";
       row[17] = p.endereco ?? "";
       row[18] = p.data_entrada ? new Date(p.data_entrada).toLocaleDateString("pt-BR") : "";
+      row[19] = p.ncm ?? "";
+      row[20] = p.cfop ?? "";
+      row[21] = p.icms_origem ?? "";
+      row[22] = p.icms_situacao_tributaria ?? "";
       return row;
     });
-    const header = new Array(19).fill(null);
+    const header = new Array(23).fill(null);
     header[3]  = "Código ML";
     header[8]  = "Descrição do item";
     header[12] = "Custo";
@@ -153,6 +174,10 @@ function ProdutosPage() {
     header[16] = "Lote";
     header[17] = "Cidade/Endereço";
     header[18] = "Data de entrada";
+    header[19] = "NCM";
+    header[20] = "CFOP";
+    header[21] = "Origem ICMS";
+    header[22] = "Situação Tributária ICMS";
     const ws = XLSX.utils.aoa_to_sheet([header, ...wsData]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Produtos");
@@ -184,15 +209,20 @@ function ProdutosPage() {
 
       const items = dataRows
         .map((r) => {
-          const sku         = r[3] != null ? String(r[3]).trim() : (r[4] != null ? String(r[4]).trim() : "");
-          const name        = r[8]  != null ? String(r[8]).trim()  : "";
-          const cost        = typeof r[12] === "number" ? r[12] : (typeof r[12] === "string" && r[12].startsWith("=") ? 0 : parseFloat(String(r[12] || "0")) || 0);
-          const price       = typeof r[13] === "number" ? r[13] : (typeof r[13] === "string" && r[13].startsWith("=") ? 0 : parseFloat(String(r[13] || "0")) || 0);
-          const category    = r[14] != null ? String(r[14]).trim() : null;
-          const subcategory = r[15] != null ? String(r[15]).trim() : null;
-          const loteCol     = r[16] != null ? String(r[16]).trim() : null;
-          const endereco    = r[17] != null ? String(r[17]).trim() : null;
-          const dataEntrada = r[18] != null ? String(r[18]).trim() : null;
+          const sku               = r[3] != null ? String(r[3]).trim() : (r[4] != null ? String(r[4]).trim() : "");
+          const name              = r[8]  != null ? String(r[8]).trim()  : "";
+          const cost              = typeof r[12] === "number" ? r[12] : (typeof r[12] === "string" && r[12].startsWith("=") ? 0 : parseFloat(String(r[12] || "0")) || 0);
+          const price             = typeof r[13] === "number" ? r[13] : (typeof r[13] === "string" && r[13].startsWith("=") ? 0 : parseFloat(String(r[13] || "0")) || 0);
+          const category          = r[14] != null ? String(r[14]).trim() : null;
+          const subcategory       = r[15] != null ? String(r[15]).trim() : null;
+          const loteCol           = r[16] != null ? String(r[16]).trim() : null;
+          const endereco          = r[17] != null ? String(r[17]).trim() : null;
+          const dataEntrada       = r[18] != null ? String(r[18]).trim() : null;
+          // Colunas fiscais (T–W) — ausentes em planilhas antigas: r[19..22] será null → campo fica null, sem quebrar importação
+          const ncmCol            = r[19] != null ? String(r[19]).trim() : null;
+          const cfopCol           = r[20] != null ? String(r[20]).trim() : null;
+          const icmsOrigemCol     = r[21] != null ? String(r[21]).trim() : null;
+          const icmsSituacaoCol   = r[22] != null ? String(r[22]).trim() : null;
 
           let dataEntradaISO: string | null = null;
           if (dataEntrada) {
@@ -223,6 +253,10 @@ function ProdutosPage() {
             lote: loteCol || lote || null,
             endereco,
             data_entrada: dataEntradaISO,
+            ncm: ncmCol || null,
+            cfop: cfopCol || null,
+            icms_origem: icmsOrigemCol || null,
+            icms_situacao_tributaria: icmsSituacaoCol || null,
           };
         })
         .filter((i) => i.name && i.name.length > 0);
@@ -382,6 +416,53 @@ function ProdutosPage() {
                   <Label>Endereço / Cidade</Label>
                   <Input value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Ex: São Paulo" />
                 </div>
+
+                {/* Classificação Fiscal para NFC-e */}
+                <div className="border-t pt-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Classificação Fiscal</span>
+                    <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Necessário para emitir NFC-e</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>NCM</Label>
+                      <Input value={ncm} onChange={(e) => setNcm(e.target.value)} placeholder="Ex: 62034200" maxLength={8} />
+                    </div>
+                    <div>
+                      <Label>CFOP</Label>
+                      <Input value={cfop} onChange={(e) => setCfop(e.target.value)} placeholder="Ex: 5102" maxLength={10} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <div>
+                      <Label>Origem do ICMS</Label>
+                      <select
+                        value={icmsOrigem}
+                        onChange={(e) => setIcmsOrigem(e.target.value)}
+                        className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                      >
+                        <option value="0">0 – Nacional</option>
+                        <option value="1">1 – Estrangeira (importação direta)</option>
+                        <option value="2">2 – Estrangeira (mercado interno)</option>
+                        <option value="3">3 – Nacional com CI 40–70%</option>
+                        <option value="4">4 – Nacional (processos produtivos)</option>
+                        <option value="5">5 – Nacional com CI ≤ 40%</option>
+                        <option value="6">6 – Estrangeira direta s/ similar (CAMEX)</option>
+                        <option value="7">7 – Estrangeira interno s/ similar (CAMEX)</option>
+                        <option value="8">8 – Nacional com CI &gt; 70%</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Label>Sit. Tributária ICMS (CST/CSOSN)</Label>
+                      <Input
+                        value={icmsSituacao}
+                        onChange={(e) => setIcmsSituacao(e.target.value)}
+                        placeholder="Ex: 102 ou 500"
+                        maxLength={10}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
@@ -448,7 +529,19 @@ function ProdutosPage() {
               )}
               {filtered.map((p: any) => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{p.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-1.5">
+                      <span>{p.name}</span>
+                      {!(p.ncm && p.cfop && p.icms_situacao_tributaria) && (
+                        <span
+                          title="Sem classificação fiscal — NCM, CFOP ou Sit. Tributária ausentes. Necessário para emitir NFC-e."
+                          className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-amber-50 text-amber-700 border border-amber-200 font-medium select-none flex-shrink-0"
+                        >
+                          NF
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{p.sku ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{p.category ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{p.subcategory ?? "—"}</TableCell>
@@ -484,7 +577,13 @@ function ProdutosPage() {
           </Table>
         </div>
         <p className="text-xs text-muted-foreground mt-3">
-          Planilha XLSX: <code>D</code> (Código ML), <code>I</code> (Descrição), <code>M</code> (Custo), <code>N</code> (Venda), <code>O</code> (Categoria), <code>P</code> (Subcategoria), <code>Q</code> (Lote), <code>R</code> (Cidade/Endereço), <code>S</code> (Data de entrada).
+          Planilha XLSX: <code>D</code> (Código ML), <code>I</code> (Descrição), <code>M</code> (Custo), <code>N</code> (Venda), <code>O</code> (Categoria), <code>P</code> (Subcategoria), <code>Q</code> (Lote), <code>R</code> (Cidade/Endereço), <code>S</code> (Data de entrada){" "}
+          · Fiscal: <code>T</code> (NCM), <code>U</code> (CFOP), <code>V</code> (Origem ICMS), <code>W</code> (Situação Tributária ICMS).
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          <span className="font-medium">Coluna V — Origem ICMS</span> (código numérico):
+          {" "}0 = Nacional · 1 = Estrangeira import. direta · 2 = Estrangeira mercado interno · 3 = Nacional CI 40–70% · 4 = Nacional proc. produtivos · 5 = Nacional CI ≤ 40% · 6 = Estrangeira direta s/ similar CAMEX · 7 = Estrangeira interno s/ similar CAMEX · 8 = Nacional CI &gt; 70%.
+          {" "}Planilhas sem as colunas T–W são importadas normalmente (campos fiscais ficam em branco).
         </p>
       </Card>
 
