@@ -272,7 +272,7 @@ function ProdutosPage() {
 
   const handleXlsxClick = () => xlsxRef.current?.click();
 
-  const categorias = [...new Set(products.map((p) => (p as any).category).filter(Boolean))].sort() as string[];
+  const categorias = [...new Set(products.map((p) => (p as any).category ?? "Sem Categoria"))].sort() as string[];
   const lotes = [...new Set(products.map((p) => (p as any).lote).filter(Boolean))].sort() as string[];
 
   const subcategoriasDaCategoria = [...new Set(
@@ -286,7 +286,8 @@ function ProdutosPage() {
     const matchSearch =
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       (p.sku ?? "").toLowerCase().includes(search.toLowerCase());
-    const matchCategoria = categoriaFiltro === "TODAS" || p.category === categoriaFiltro;
+    const matchCategoria = categoriaFiltro === "TODAS" ||
+      (categoriaFiltro === "Sem Categoria" ? (!p.category || p.category === "Sem Categoria") : p.category === categoriaFiltro);
     const matchLote = loteFiltro === "TODOS" || p.lote === loteFiltro;
     return matchSearch && matchCategoria && matchLote;
   });
@@ -543,7 +544,7 @@ function ProdutosPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{p.sku ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.category ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{p.category ?? "Sem Categoria"}</TableCell>
                   <TableCell className="text-muted-foreground">{p.subcategory ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {p.lote ? (

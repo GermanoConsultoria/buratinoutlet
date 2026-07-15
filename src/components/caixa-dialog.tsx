@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { abrirCaixa, fecharCaixa, listOperadores } from "@/lib/sales.functions";
+import { abrirCaixa, fecharCaixa, listOperadores, salvarFechamentoDiario } from "@/lib/sales.functions";
 import { formatBRL } from "@/lib/format";
 import type { Caixa, ResumoCaixa } from "@/lib/caixa.types";
 
@@ -152,6 +152,7 @@ export function ModalAbrirCaixa({ onSuccess, onClose }: AbrirProps) {
 
 export function ModalFecharCaixa({ resumo, onSuccess, onClose }: FecharProps) {
   const fechar = useServerFn(fecharCaixa);
+  const salvarFech = useServerFn(salvarFechamentoDiario);
   const [valorCentavos, setValorCentavos] = useState(
     Math.round(resumo.saldo_esperado * 100)
   );
@@ -186,6 +187,31 @@ export function ModalFecharCaixa({ resumo, onSuccess, onClose }: FecharProps) {
           observacao: observacao.trim() || undefined,
         },
       });
+      // Grava o fechamento no relatório de caixa
+      try {
+        await salvarFech({
+          data: {
+            caixa_id: resumo.caixa.id,
+            valor_fechamento: valorCentavos / 100,
+            total_vendas: resumo.total_vendas,
+            total_cancelamentos: resumo.total_cancelamentos,
+            total_sangrias: resumo.total_sangrias,
+            total_descontos: resumo.total_descontos,
+            qtd_vendas: resumo.qtd_vendas,
+            qtd_cancelamentos: resumo.qtd_cancelamentos,
+            qtd_sangrias: resumo.qtd_sangrias,
+            total_dinheiro: resumo.total_dinheiro,
+            total_credito: resumo.total_credito,
+            total_debito: resumo.total_debito,
+            total_pix: resumo.total_pix,
+            valor_abertura: Number(resumo.caixa.valor_abertura),
+            saldo_esperado: resumo.saldo_esperado,
+            nome_operador: resumo.caixa.nome_operador ?? undefined,
+          },
+        });
+      } catch (fechErr) {
+        console.error("Erro ao salvar fechamento no relatório:", fechErr);
+      }
       toast.success("Caixa fechado com sucesso!");
       onSuccess();
     } catch (e) {

@@ -77,7 +77,7 @@ export const listSales = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("sales")
-      .select("id, receipt_number, total, payment_method, payment_methods, amount_paid, change_due, created_at, canceled_at, cancel_reason")
+      .select("id, receipt_number, total, desconto, payment_method, payment_methods, amount_paid, change_due, created_at, canceled_at, cancel_reason")
       .order("created_at", { ascending: false })
       .limit(500);
     if (error) throw new Error(error.message);
@@ -354,28 +354,29 @@ export const salvarFechamentoDiario = createServerFn({ method: "POST" })
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
+    const payload = {
+      caixa_id: data.caixa_id,
+      data_fechamento: new Date().toISOString().split("T")[0],
+      total_vendas: data.total_vendas,
+      total_cancelamentos: data.total_cancelamentos,
+      total_sangrias: data.total_sangrias,
+      total_descontos: data.total_descontos,
+      qtd_vendas: data.qtd_vendas,
+      qtd_cancelamentos: data.qtd_cancelamentos,
+      qtd_sangrias: data.qtd_sangrias,
+      total_dinheiro: data.total_dinheiro,
+      total_credito: data.total_credito,
+      total_debito: data.total_debito,
+      total_pix: data.total_pix,
+      valor_abertura: data.valor_abertura,
+      valor_fechamento: data.valor_fechamento,
+      saldo_esperado: data.saldo_esperado,
+      nome_operador: data.nome_operador ?? null,
+      fechado_por: context.userId,
+    };
     const { error } = await context.supabase
       .from("fechamento_caixa")
-      .insert({
-        caixa_id: data.caixa_id,
-        data_fechamento: new Date().toISOString().split("T")[0],
-        total_vendas: data.total_vendas,
-        total_cancelamentos: data.total_cancelamentos,
-        total_sangrias: data.total_sangrias,
-        total_descontos: data.total_descontos,
-        qtd_vendas: data.qtd_vendas,
-        qtd_cancelamentos: data.qtd_cancelamentos,
-        qtd_sangrias: data.qtd_sangrias,
-        total_dinheiro: data.total_dinheiro,
-        total_credito: data.total_credito,
-        total_debito: data.total_debito,
-        total_pix: data.total_pix,
-        valor_abertura: data.valor_abertura,
-        valor_fechamento: data.valor_fechamento,
-        saldo_esperado: data.saldo_esperado,
-        nome_operador: data.nome_operador ?? null,
-        fechado_por: context.userId,
-      });
+      .upsert(payload, { onConflict: "caixa_id" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });

@@ -143,11 +143,16 @@ function PdvPage() {
       const vendasDoCaixa = vendas.filter(
         (v) => !v.canceled_at && new Date(v.created_at).getTime() >= abertoEm
       );
+      const vendasCanceladasDoCaixa = vendas.filter(
+        (v) => v.canceled_at && new Date(v.created_at).getTime() >= abertoEm
+      );
       const sangriasDoCaixa = sangrias.filter(
         (s) => new Date(s.created_at).getTime() >= abertoEm
       );
       const total_sangrias = sangriasDoCaixa.reduce((acc, s) => acc + Number(s.valor), 0);
       const total_vendas = vendasDoCaixa.reduce((s, v) => s + Number(v.total), 0);
+      const total_cancelamentos = vendasCanceladasDoCaixa.reduce((s, v) => s + Number(v.total), 0);
+      const total_descontos = vendasDoCaixa.reduce((s, v) => s + Number((v as any).desconto ?? 0), 0);
 
       // Calcula dinheiro incluindo misto
       let total_dinheiro = 0;
@@ -174,12 +179,16 @@ function PdvPage() {
       setResumoCaixa({
         caixa: caixaAberto,
         total_vendas,
+        total_cancelamentos,
+        total_descontos,
         total_dinheiro,
         total_credito,
         total_debito,
         total_pix,
         total_sangrias,
         qtd_vendas: vendasDoCaixa.length,
+        qtd_cancelamentos: vendasCanceladasDoCaixa.length,
+        qtd_sangrias: sangriasDoCaixa.length,
         saldo_esperado,
       });
       setShowFecharCaixa(true);

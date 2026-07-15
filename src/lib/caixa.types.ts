@@ -17,11 +17,15 @@ export type Caixa = {
 export type ResumoCaixa = {
   caixa: Caixa;
   total_vendas: number;
+  total_cancelamentos: number;
   total_dinheiro: number;
   total_credito: number;
   total_debito: number;
   total_pix: number;
+  total_descontos: number;
+  total_sangrias: number;
   qtd_vendas: number;
-  total_sangrias: number; // <-- ADICIONADO
+  qtd_cancelamentos: number;
+  qtd_sangrias: number;
   saldo_esperado: number;
 };
