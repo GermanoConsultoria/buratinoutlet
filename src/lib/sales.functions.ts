@@ -123,8 +123,9 @@ export const getCaixaAberto = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("caixa")
-      .select("*") // Puxa tudo, incluindo a nova coluna nome_operador
+      .select("*")
       .eq("status", "ABERTO")
+      .eq("aberto_por", context.userId)
       .order("aberto_em", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -146,9 +147,10 @@ export const abrirCaixa = createServerFn({ method: "POST" })
       .from("caixa")
       .select("id")
       .eq("status", "ABERTO")
+      .eq("aberto_por", context.userId)
       .limit(1)
       .maybeSingle();
-    if (aberto) throw new Error("Já existe um caixa aberto.");
+    if (aberto) throw new Error("Você já tem um caixa aberto.");
 
     const { data: caixa, error } = await context.supabase
       .from("caixa")
