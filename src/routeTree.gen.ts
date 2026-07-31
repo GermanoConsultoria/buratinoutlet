@@ -23,6 +23,7 @@ import { Route as AppFinanceiroRelatoriosCaixaRouteImport } from './routes/_app/
 import { Route as AppFinanceiroReceberRouteImport } from './routes/_app/financeiro.receber'
 import { Route as AppFinanceiroPagarRouteImport } from './routes/_app/financeiro.pagar'
 import { Route as AppFinanceiroDashboardRouteImport } from './routes/_app/financeiro.dashboard'
+import { Route as AppFinanceiroCurvaAbcRouteImport } from './routes/_app/financeiro.curva-abc'
 import { Route as AppFinanceiroBalanceteRouteImport } from './routes/_app/financeiro.balancete'
 import { Route as AppConfigUsuariosRouteImport } from './routes/_app/config.usuarios'
 import { Route as AppConfigPlanoContasRouteImport } from './routes/_app/config.plano-contas'
@@ -101,6 +102,11 @@ const AppFinanceiroDashboardRoute = AppFinanceiroDashboardRouteImport.update({
   path: '/financeiro/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFinanceiroCurvaAbcRoute = AppFinanceiroCurvaAbcRouteImport.update({
+  id: '/financeiro/curva-abc',
+  path: '/financeiro/curva-abc',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppFinanceiroBalanceteRoute = AppFinanceiroBalanceteRouteImport.update({
   id: '/financeiro/balancete',
   path: '/financeiro/balancete',
@@ -147,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/config/plano-contas': typeof AppConfigPlanoContasRoute
   '/config/usuarios': typeof AppConfigUsuariosRoute
   '/financeiro/balancete': typeof AppFinanceiroBalanceteRoute
+  '/financeiro/curva-abc': typeof AppFinanceiroCurvaAbcRoute
   '/financeiro/dashboard': typeof AppFinanceiroDashboardRoute
   '/financeiro/pagar': typeof AppFinanceiroPagarRoute
   '/financeiro/receber': typeof AppFinanceiroReceberRoute
@@ -168,6 +175,7 @@ export interface FileRoutesByTo {
   '/config/plano-contas': typeof AppConfigPlanoContasRoute
   '/config/usuarios': typeof AppConfigUsuariosRoute
   '/financeiro/balancete': typeof AppFinanceiroBalanceteRoute
+  '/financeiro/curva-abc': typeof AppFinanceiroCurvaAbcRoute
   '/financeiro/dashboard': typeof AppFinanceiroDashboardRoute
   '/financeiro/pagar': typeof AppFinanceiroPagarRoute
   '/financeiro/receber': typeof AppFinanceiroReceberRoute
@@ -191,6 +199,7 @@ export interface FileRoutesById {
   '/_app/config/plano-contas': typeof AppConfigPlanoContasRoute
   '/_app/config/usuarios': typeof AppConfigUsuariosRoute
   '/_app/financeiro/balancete': typeof AppFinanceiroBalanceteRoute
+  '/_app/financeiro/curva-abc': typeof AppFinanceiroCurvaAbcRoute
   '/_app/financeiro/dashboard': typeof AppFinanceiroDashboardRoute
   '/_app/financeiro/pagar': typeof AppFinanceiroPagarRoute
   '/_app/financeiro/receber': typeof AppFinanceiroReceberRoute
@@ -214,6 +223,7 @@ export interface FileRouteTypes {
     | '/config/plano-contas'
     | '/config/usuarios'
     | '/financeiro/balancete'
+    | '/financeiro/curva-abc'
     | '/financeiro/dashboard'
     | '/financeiro/pagar'
     | '/financeiro/receber'
@@ -235,6 +245,7 @@ export interface FileRouteTypes {
     | '/config/plano-contas'
     | '/config/usuarios'
     | '/financeiro/balancete'
+    | '/financeiro/curva-abc'
     | '/financeiro/dashboard'
     | '/financeiro/pagar'
     | '/financeiro/receber'
@@ -257,6 +268,7 @@ export interface FileRouteTypes {
     | '/_app/config/plano-contas'
     | '/_app/config/usuarios'
     | '/_app/financeiro/balancete'
+    | '/_app/financeiro/curva-abc'
     | '/_app/financeiro/dashboard'
     | '/_app/financeiro/pagar'
     | '/_app/financeiro/receber'
@@ -371,6 +383,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFinanceiroDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/financeiro/curva-abc': {
+      id: '/_app/financeiro/curva-abc'
+      path: '/financeiro/curva-abc'
+      fullPath: '/financeiro/curva-abc'
+      preLoaderRoute: typeof AppFinanceiroCurvaAbcRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/financeiro/balancete': {
       id: '/_app/financeiro/balancete'
       path: '/financeiro/balancete'
@@ -428,6 +447,7 @@ interface AppRouteChildren {
   AppConfigPlanoContasRoute: typeof AppConfigPlanoContasRoute
   AppConfigUsuariosRoute: typeof AppConfigUsuariosRoute
   AppFinanceiroBalanceteRoute: typeof AppFinanceiroBalanceteRoute
+  AppFinanceiroCurvaAbcRoute: typeof AppFinanceiroCurvaAbcRoute
   AppFinanceiroDashboardRoute: typeof AppFinanceiroDashboardRoute
   AppFinanceiroPagarRoute: typeof AppFinanceiroPagarRoute
   AppFinanceiroReceberRoute: typeof AppFinanceiroReceberRoute
@@ -448,6 +468,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppConfigPlanoContasRoute: AppConfigPlanoContasRoute,
   AppConfigUsuariosRoute: AppConfigUsuariosRoute,
   AppFinanceiroBalanceteRoute: AppFinanceiroBalanceteRoute,
+  AppFinanceiroCurvaAbcRoute: AppFinanceiroCurvaAbcRoute,
   AppFinanceiroDashboardRoute: AppFinanceiroDashboardRoute,
   AppFinanceiroPagarRoute: AppFinanceiroPagarRoute,
   AppFinanceiroReceberRoute: AppFinanceiroReceberRoute,

@@ -51,6 +51,7 @@ const groups: NavGroup[] = [
       { title: "Balancete", url: "/financeiro/balancete", icon: BarChart3, modulo: "financeiro" },
       { title: "Dashboard", url: "/financeiro/dashboard", icon: Wallet, modulo: "financeiro" },
       { title: "Relatórios de Caixa", url: "/financeiro/relatorios-caixa", icon: BarChart3, modulo: "financeiro" },
+      { title: "Curva ABC", url: "/financeiro/curva-abc", icon: BarChart3, modulo: "financeiro" },
     ],
   },
   {
