@@ -158,7 +158,7 @@ function RelatoriosCaixaPage() {
                   <div className="flex items-center gap-2">
                     <ArrowDownCircle size={10} className="text-orange-500 flex-shrink-0" />
                     <div>
-                      <span className="font-semibold text-orange-700">{sg.nome_responsavel ?? "—"}</span>
+                      <span className="font-semibold text-orange-700">{sg.nome_responsavel ?? null}</span>
                       <span className="text-muted-foreground ml-2">{formatarHora(sg.created_at)}</span>
                       {sg.motivo && <span className="text-muted-foreground ml-1">— {sg.motivo}</span>}
                     </div>

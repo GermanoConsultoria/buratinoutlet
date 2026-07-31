@@ -3,7 +3,7 @@ import type { ThemeTemplate } from '../types';
 export const newYearTheme: ThemeTemplate = {
   id: 'newYear',
   name: 'Ano Novo',
-  description: 'Preto, prata e dourado — visual elegante e premium para celebrar.',
+  description: 'Boas energias, renovação e muito brilho!',
   category: 'festivo',
   emoji: '🎆',
   palette: ['#c9a227', '#a0a0b0', '#0a0a14', '#1e1e2e'],

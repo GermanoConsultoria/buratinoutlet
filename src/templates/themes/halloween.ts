@@ -3,7 +3,7 @@ import type { ThemeTemplate } from '../types';
 export const halloweenTheme: ThemeTemplate = {
   id: 'halloween',
   name: 'Halloween',
-  description: 'Preto, laranja e roxo — sombras intensas e atmosfera misteriosa.',
+  description: 'Mistério e diversão em um tema assustador.',
   category: 'sazonal',
   emoji: '🎃',
   palette: ['#e67e22', '#8e44ad', '#1a0a00', '#2c1800'],

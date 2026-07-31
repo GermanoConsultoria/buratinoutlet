@@ -120,10 +120,10 @@ function UsuariosPage() {
                         <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs flex-shrink-0">
                           {(u.full_name ?? "?").substring(0, 2).toUpperCase()}
                         </div>
-                        <span className="font-medium">{u.full_name ?? "—"}</span>
+                        <span className="font-medium">{u.full_name ?? null}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground">{u.cargo ?? "—"}</td>
+                    <td className="px-6 py-4 text-muted-foreground">{u.cargo ?? null}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${ROLE_COR[u.role] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}>
                         {ROLE_LABEL[u.role] ?? u.role}

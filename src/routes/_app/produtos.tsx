@@ -729,24 +729,24 @@ function ProdutosPage() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{p.sku ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{p.sku ?? null}</TableCell>
                   <TableCell className="text-muted-foreground">{p.category ?? "Sem Categoria"}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.subcategory ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{p.subcategory ?? null}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {p.lote ? (
                       <span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary border border-primary/20 font-medium">
                         {p.lote}
                       </span>
-                    ) : "—"}
+                    ) : null}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
-                    {p.data_entrada ? new Date(p.data_entrada).toLocaleDateString("pt-BR") : "—"}
+                    {p.data_entrada ? new Date(p.data_entrada).toLocaleDateString("pt-BR") : null}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs max-w-[120px] truncate">
-                    {p.endereco ?? "—"}
+                    {p.endereco ?? null}
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-muted-foreground">
-                    {p.cost ? formatBRL(p.cost) : "—"}
+                    {p.cost ? formatBRL(p.cost) : null}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{formatBRL(p.price)}</TableCell>
                   <TableCell className="flex gap-1 justify-end">

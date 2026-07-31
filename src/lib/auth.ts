@@ -9,7 +9,8 @@ export type Modulo =
   | "clientes"
   | "financeiro"
   | "configuracoes"
-  | "templates";
+  | "templates"
+  | "integracoes";
 
 export const MODULOS_LABELS: Record<Modulo, string> = {
   pdv: "PDV",
@@ -21,6 +22,7 @@ export const MODULOS_LABELS: Record<Modulo, string> = {
   financeiro: "Financeiro",
   configuracoes: "Configurações",
   templates: "Templates",
+  integracoes: "Integrações",
 };
 
 export type Role = "USER" | "MANAGER" | "OWNER";
@@ -84,6 +86,6 @@ export function isManagerOrOwner(profile: UserProfile | null): boolean {
 // Módulos padrão por role ao criar usuário
 export const MODULOS_PADRAO: Record<Role, Modulo[]> = {
   USER: ["pdv", "historico_vendas", "templates"],
-  MANAGER: ["pdv", "vendas", "produtos", "fornecedores", "clientes", "templates"],
-  OWNER: ["pdv", "historico_vendas", "vendas", "produtos", "fornecedores", "clientes", "financeiro", "configuracoes", "templates"],
+  MANAGER: ["pdv", "vendas", "produtos", "fornecedores", "clientes", "templates", "integracoes"],
+  OWNER: ["pdv", "historico_vendas", "vendas", "produtos", "fornecedores", "clientes", "financeiro", "configuracoes", "templates", "integracoes"],
 };

@@ -3,7 +3,7 @@ import type { ThemeTemplate } from '../types';
 export const summerTheme: ThemeTemplate = {
   id: 'summer',
   name: 'Verão',
-  description: 'Azul oceano, amarelo solar e laranja — energia, praia e alegria tropical.',
+  description: 'Sol, praia e energia tropical o ano todo.',
   category: 'sazonal',
   emoji: '☀️',
   palette: ['#1a88c9', '#f5c842', '#e8761a', '#fff8e8'],

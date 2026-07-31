@@ -149,11 +149,11 @@ function ClientesPage() {
               filtered.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">{c.nome}</TableCell>
-                  <TableCell className="text-muted-foreground">{c.cpf || "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{c.email || "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{c.telefone || "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{c.cpf || null}</TableCell>
+                  <TableCell className="text-muted-foreground">{c.email || null}</TableCell>
+                  <TableCell className="text-muted-foreground">{c.telefone || null}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {c.cidade && c.estado ? `${c.cidade} / ${c.estado}` : c.cidade || c.estado || "—"}
+                    {c.cidade && c.estado ? `${c.cidade} / ${c.estado}` : c.cidade || c.estado || null}
                   </TableCell>
                   <TableCell>
                     <Badge variant={c.ativo ? "default" : "secondary"}>

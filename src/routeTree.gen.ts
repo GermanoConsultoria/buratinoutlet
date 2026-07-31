@@ -17,6 +17,7 @@ import { Route as AppTemplatesRouteImport } from './routes/_app/templates'
 import { Route as AppProdutosRouteImport } from './routes/_app/produtos'
 import { Route as AppPdvRouteImport } from './routes/_app/pdv'
 import { Route as AppHistoricoVendasRouteImport } from './routes/_app/historico-vendas'
+import { Route as AppIntegracoesBancoInterRouteImport } from './routes/_app/integracoes.banco-inter'
 import { Route as AppFinanceiroRelatoriosCaixaRouteImport } from './routes/_app/financeiro.relatorios-caixa'
 import { Route as AppFinanceiroReceberRouteImport } from './routes/_app/financeiro.receber'
 import { Route as AppFinanceiroPagarRouteImport } from './routes/_app/financeiro.pagar'
@@ -67,6 +68,12 @@ const AppHistoricoVendasRoute = AppHistoricoVendasRouteImport.update({
   path: '/historico-vendas',
   getParentRoute: () => AppRoute,
 } as any)
+const AppIntegracoesBancoInterRoute =
+  AppIntegracoesBancoInterRouteImport.update({
+    id: '/integracoes/banco-inter',
+    path: '/integracoes/banco-inter',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppFinanceiroRelatoriosCaixaRoute =
   AppFinanceiroRelatoriosCaixaRouteImport.update({
     id: '/financeiro/relatorios-caixa',
@@ -138,6 +145,7 @@ export interface FileRoutesByFullPath {
   '/financeiro/pagar': typeof AppFinanceiroPagarRoute
   '/financeiro/receber': typeof AppFinanceiroReceberRoute
   '/financeiro/relatorios-caixa': typeof AppFinanceiroRelatoriosCaixaRoute
+  '/integracoes/banco-inter': typeof AppIntegracoesBancoInterRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -157,6 +165,7 @@ export interface FileRoutesByTo {
   '/financeiro/pagar': typeof AppFinanceiroPagarRoute
   '/financeiro/receber': typeof AppFinanceiroReceberRoute
   '/financeiro/relatorios-caixa': typeof AppFinanceiroRelatoriosCaixaRoute
+  '/integracoes/banco-inter': typeof AppIntegracoesBancoInterRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -178,6 +187,7 @@ export interface FileRoutesById {
   '/_app/financeiro/pagar': typeof AppFinanceiroPagarRoute
   '/_app/financeiro/receber': typeof AppFinanceiroReceberRoute
   '/_app/financeiro/relatorios-caixa': typeof AppFinanceiroRelatoriosCaixaRoute
+  '/_app/integracoes/banco-inter': typeof AppIntegracoesBancoInterRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/financeiro/pagar'
     | '/financeiro/receber'
     | '/financeiro/relatorios-caixa'
+    | '/integracoes/banco-inter'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -218,6 +229,7 @@ export interface FileRouteTypes {
     | '/financeiro/pagar'
     | '/financeiro/receber'
     | '/financeiro/relatorios-caixa'
+    | '/integracoes/banco-inter'
   id:
     | '__root__'
     | '/'
@@ -238,6 +250,7 @@ export interface FileRouteTypes {
     | '/_app/financeiro/pagar'
     | '/_app/financeiro/receber'
     | '/_app/financeiro/relatorios-caixa'
+    | '/_app/integracoes/banco-inter'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -302,6 +315,13 @@ declare module '@tanstack/react-router' {
       path: '/historico-vendas'
       fullPath: '/historico-vendas'
       preLoaderRoute: typeof AppHistoricoVendasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/integracoes/banco-inter': {
+      id: '/_app/integracoes/banco-inter'
+      path: '/integracoes/banco-inter'
+      fullPath: '/integracoes/banco-inter'
+      preLoaderRoute: typeof AppIntegracoesBancoInterRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/financeiro/relatorios-caixa': {
@@ -393,6 +413,7 @@ interface AppRouteChildren {
   AppFinanceiroPagarRoute: typeof AppFinanceiroPagarRoute
   AppFinanceiroReceberRoute: typeof AppFinanceiroReceberRoute
   AppFinanceiroRelatoriosCaixaRoute: typeof AppFinanceiroRelatoriosCaixaRoute
+  AppIntegracoesBancoInterRoute: typeof AppIntegracoesBancoInterRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -411,6 +432,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFinanceiroPagarRoute: AppFinanceiroPagarRoute,
   AppFinanceiroReceberRoute: AppFinanceiroReceberRoute,
   AppFinanceiroRelatoriosCaixaRoute: AppFinanceiroRelatoriosCaixaRoute,
+  AppIntegracoesBancoInterRoute: AppIntegracoesBancoInterRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

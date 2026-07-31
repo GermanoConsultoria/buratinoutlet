@@ -3,7 +3,7 @@ import type { ThemeTemplate } from '../types';
 export const easterTheme: ThemeTemplate = {
   id: 'easter',
   name: 'Páscoa',
-  description: 'Tons pastéis suaves — interface delicada e alegre para a Páscoa.',
+  description: 'Doçura, harmonia e cores suaves da Páscoa.',
   category: 'sazonal',
   emoji: '🐣',
   palette: ['#c68fe0', '#90d4a8', '#f5d5e8', '#e8f0ff'],

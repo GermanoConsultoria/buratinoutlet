@@ -213,7 +213,7 @@ function VendasPage() {
                       <TableCell className="text-muted-foreground">
                         {s.canceled_at ? (
                           <span className="text-destructive">{formatDateTime(s.canceled_at)}</span>
-                        ) : "—"}
+                        ) : null}
                       </TableCell>
                       <TableCell>{paymentLabel(s.payment_method)}</TableCell>
                       <TableCell>
@@ -268,7 +268,7 @@ function VendasPage() {
                                     <td className="py-1.5 text-right tabular-nums">{formatBRL(Number(item.price))}</td>
                                     <td className="py-1.5 text-right tabular-nums font-semibold">{formatBRL(Number(item.subtotal))}</td>
                                     <td className="py-1.5 text-right text-muted-foreground">
-                                      {item.data_saida ? new Date(item.data_saida).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—"}
+                                      {item.data_saida ? new Date(item.data_saida).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }) : null}
                                     </td>
                                   </tr>
                                 ))}
@@ -351,7 +351,7 @@ function VendasPage() {
                     <tr key={s.id} className="hover:bg-muted/30">
                       <td className="px-4 py-3 font-mono">#{String(s.receipt_number).padStart(6, "0")}</td>
                       <td className="px-4 py-3 text-muted-foreground">{formatDateTime(s.created_at)}</td>
-                      <td className="px-4 py-3 text-destructive">{s.canceled_at ? formatDateTime(s.canceled_at) : "—"}</td>
+                      <td className="px-4 py-3 text-destructive">{s.canceled_at ? formatDateTime(s.canceled_at) : null}</td>
                       <td className="px-4 py-3">{paymentLabel(s.payment_method)}</td>
                       <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">
                         {s.cancel_reason ?? <span className="italic text-muted-foreground/60">Sem motivo informado</span>}

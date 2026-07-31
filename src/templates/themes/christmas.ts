@@ -3,7 +3,7 @@ import type { ThemeTemplate } from '../types';
 export const christmasTheme: ThemeTemplate = {
   id: 'christmas',
   name: 'Natal',
-  description: 'Tons de vermelho, verde e dourado com espírito natalino e neve suave.',
+  description: 'Celebre o Natal com cores tradicionais e clima festivo.',
   category: 'festivo',
   emoji: '🎄',
   palette: ['#c0392b', '#27ae60', '#f39c12', '#fdf9f0'],

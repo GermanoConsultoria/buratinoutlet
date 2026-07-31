@@ -3,7 +3,7 @@ import type { ThemeTemplate } from '../types';
 export const winterTheme: ThemeTemplate = {
   id: 'winter',
   name: 'Inverno',
-  description: 'Azul claro, branco e cinza — minimalismo gélido com efeito de gelo e neve.',
+  description: 'Clima gelado, aconchego e tons frios.',
   category: 'sazonal',
   emoji: '❄️',
   palette: ['#5b9bd5', '#b8d4f0', '#e4f0fc', '#1a2e4a'],

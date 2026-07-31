@@ -149,11 +149,11 @@ function FornecedoresPage() {
               filtered.map((f) => (
                 <TableRow key={f.id}>
                   <TableCell className="font-medium">{f.nome}</TableCell>
-                  <TableCell className="text-muted-foreground">{f.cnpj || "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{f.email || "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{f.telefone || "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{f.cnpj || null}</TableCell>
+                  <TableCell className="text-muted-foreground">{f.email || null}</TableCell>
+                  <TableCell className="text-muted-foreground">{f.telefone || null}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {f.cidade && f.estado ? `${f.cidade} / ${f.estado}` : f.cidade || f.estado || "—"}
+                    {f.cidade && f.estado ? `${f.cidade} / ${f.estado}` : f.cidade || f.estado || null}
                   </TableCell>
                   <TableCell>
                     <Badge variant={f.ativo ? "default" : "secondary"}>

@@ -3,7 +3,7 @@ import type { ThemeTemplate } from '../types';
 export const darkPremiumTheme: ThemeTemplate = {
   id: 'darkPremium',
   name: 'Dark Premium',
-  description: 'Preto, grafite e detalhes dourados — aparência sofisticada e elegante.',
+  description: 'Sofisticação e elegância em modo escuro.',
   category: 'premium',
   emoji: '👑',
   palette: ['#c9a227', '#2a2a38', '#0a0a12', '#4a4a58'],

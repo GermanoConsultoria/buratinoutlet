@@ -3,7 +3,7 @@ import type { ThemeTemplate } from '../types';
 export const carnavalTheme: ThemeTemplate = {
   id: 'carnaval',
   name: 'Carnaval',
-  description: 'Roxo, amarelo e rosa — gradientes vibrantes e energia festiva com confetes.',
+  description: 'Energia, alegria e cores vibrantes do Carnaval!',
   category: 'festivo',
   emoji: '🎭',
   palette: ['#8e44ad', '#f1c40f', '#e91e8c', '#3498db'],
