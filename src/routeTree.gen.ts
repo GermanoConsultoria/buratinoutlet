@@ -17,6 +17,7 @@ import { Route as AppTemplatesRouteImport } from './routes/_app/templates'
 import { Route as AppProdutosRouteImport } from './routes/_app/produtos'
 import { Route as AppPdvRouteImport } from './routes/_app/pdv'
 import { Route as AppHistoricoVendasRouteImport } from './routes/_app/historico-vendas'
+import { Route as AppIntegracoesWhatsappRouteImport } from './routes/_app/integracoes.whatsapp'
 import { Route as AppIntegracoesBancoInterRouteImport } from './routes/_app/integracoes.banco-inter'
 import { Route as AppFinanceiroRelatoriosCaixaRouteImport } from './routes/_app/financeiro.relatorios-caixa'
 import { Route as AppFinanceiroReceberRouteImport } from './routes/_app/financeiro.receber'
@@ -66,6 +67,11 @@ const AppPdvRoute = AppPdvRouteImport.update({
 const AppHistoricoVendasRoute = AppHistoricoVendasRouteImport.update({
   id: '/historico-vendas',
   path: '/historico-vendas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIntegracoesWhatsappRoute = AppIntegracoesWhatsappRouteImport.update({
+  id: '/integracoes/whatsapp',
+  path: '/integracoes/whatsapp',
   getParentRoute: () => AppRoute,
 } as any)
 const AppIntegracoesBancoInterRoute =
@@ -146,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/financeiro/receber': typeof AppFinanceiroReceberRoute
   '/financeiro/relatorios-caixa': typeof AppFinanceiroRelatoriosCaixaRoute
   '/integracoes/banco-inter': typeof AppIntegracoesBancoInterRoute
+  '/integracoes/whatsapp': typeof AppIntegracoesWhatsappRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/financeiro/receber': typeof AppFinanceiroReceberRoute
   '/financeiro/relatorios-caixa': typeof AppFinanceiroRelatoriosCaixaRoute
   '/integracoes/banco-inter': typeof AppIntegracoesBancoInterRoute
+  '/integracoes/whatsapp': typeof AppIntegracoesWhatsappRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/_app/financeiro/receber': typeof AppFinanceiroReceberRoute
   '/_app/financeiro/relatorios-caixa': typeof AppFinanceiroRelatoriosCaixaRoute
   '/_app/integracoes/banco-inter': typeof AppIntegracoesBancoInterRoute
+  '/_app/integracoes/whatsapp': typeof AppIntegracoesWhatsappRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -210,6 +219,7 @@ export interface FileRouteTypes {
     | '/financeiro/receber'
     | '/financeiro/relatorios-caixa'
     | '/integracoes/banco-inter'
+    | '/integracoes/whatsapp'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -230,6 +240,7 @@ export interface FileRouteTypes {
     | '/financeiro/receber'
     | '/financeiro/relatorios-caixa'
     | '/integracoes/banco-inter'
+    | '/integracoes/whatsapp'
   id:
     | '__root__'
     | '/'
@@ -251,6 +262,7 @@ export interface FileRouteTypes {
     | '/_app/financeiro/receber'
     | '/_app/financeiro/relatorios-caixa'
     | '/_app/integracoes/banco-inter'
+    | '/_app/integracoes/whatsapp'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -315,6 +327,13 @@ declare module '@tanstack/react-router' {
       path: '/historico-vendas'
       fullPath: '/historico-vendas'
       preLoaderRoute: typeof AppHistoricoVendasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/integracoes/whatsapp': {
+      id: '/_app/integracoes/whatsapp'
+      path: '/integracoes/whatsapp'
+      fullPath: '/integracoes/whatsapp'
+      preLoaderRoute: typeof AppIntegracoesWhatsappRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/integracoes/banco-inter': {
@@ -414,6 +433,7 @@ interface AppRouteChildren {
   AppFinanceiroReceberRoute: typeof AppFinanceiroReceberRoute
   AppFinanceiroRelatoriosCaixaRoute: typeof AppFinanceiroRelatoriosCaixaRoute
   AppIntegracoesBancoInterRoute: typeof AppIntegracoesBancoInterRoute
+  AppIntegracoesWhatsappRoute: typeof AppIntegracoesWhatsappRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -433,6 +453,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFinanceiroReceberRoute: AppFinanceiroReceberRoute,
   AppFinanceiroRelatoriosCaixaRoute: AppFinanceiroRelatoriosCaixaRoute,
   AppIntegracoesBancoInterRoute: AppIntegracoesBancoInterRoute,
+  AppIntegracoesWhatsappRoute: AppIntegracoesWhatsappRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

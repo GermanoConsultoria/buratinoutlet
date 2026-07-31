@@ -1,7 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   ShoppingCart, Package, Receipt, Wallet, ArrowDownCircle, ArrowUpCircle,
-  BarChart3, Users, ListTree, LogOut, History, Building2, Palette, Plug2,
+  BarChart3, Users, ListTree, LogOut, History, Building2, Palette, Plug2, MessageCircle,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -63,6 +63,7 @@ const groups: NavGroup[] = [
     label: "Integrações",
     items: [
       { title: "Banco Inter", url: "/integracoes/banco-inter", icon: Plug2, modulo: "integracoes" },
+      { title: "WhatsApp", url: "/integracoes/whatsapp", icon: MessageCircle, modulo: "integracoes" },
     ],
   },
   {

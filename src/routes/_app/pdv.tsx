@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import {
   ShoppingCart, Plus, Minus, X, Search, Barcode,
   ChevronLeft, Tag, Lock, Unlock, Percent, ArrowDownCircle, FileText, SplitSquareHorizontal,
-  CheckCircle2, AlertCircle, ExternalLink, Loader2,
+  CheckCircle2, AlertCircle, ExternalLink, Loader2, MessageCircle,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import { ReceiptDialog, type Receipt } from "@/components/receipt-dialog";
 import { ModalAbrirCaixa, ModalFecharCaixa } from "@/components/caixa-dialog";
 import { ModalSangria, ComprovanteSangria } from "@/components/sangria-dialog";
 import { FechamentoDiarioDialog, FechamentoMensalDialog } from "@/components/fechamento-dialog";
+import { WhatsappSendDialog } from "@/components/whatsapp-send-dialog";
 import type { Caixa, ResumoCaixa } from "@/lib/caixa.types";
 import { useAuth } from "@/hooks/use-auth";
 import { isManagerOrOwner } from "@/lib/auth";
@@ -99,6 +100,12 @@ function PdvPage() {
   const [tipoDocumento, setTipoDocumento] = useState<"cupom" | "nfce">("cupom");
   const [focusNfeConfigurado, setFocusNfeConfigurado] = useState(false);
   const [nfceState, setNfceState] = useState<NfceState>(null);
+  const [whatsappSend, setWhatsappSend] = useState<{
+    tipo: "cupom" | "nfce";
+    receiptNumber: number;
+    danfe_url?: string | null;
+    receipt?: Receipt;
+  } | null>(null);
   const [barcodeFlash, setBarcodeFlash] = useState<string | null>(null);
   const [descontoGeral, setDescontoGeral] = useState("");
   const [editandoDescontoIdx, setEditandoDescontoIdx] = useState<number | null>(null);
@@ -830,6 +837,18 @@ function PdvPage() {
             <AlertDialogDescription>Venda #{printPrompt?.receipt_number} registrada. Deseja imprimir o cupom agora?</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setWhatsappSend({
+                tipo: "cupom",
+                receiptNumber: printPrompt!.receipt_number,
+                receipt: printPrompt!,
+              })}
+            >
+              <MessageCircle className="h-4 w-4" style={{ color: "#25D366" }} />
+              Enviar por WhatsApp
+            </Button>
             <AlertDialogCancel onClick={() => setPrintPrompt(null)}>Não</AlertDialogCancel>
             <AlertDialogAction onClick={() => { setReceipt(printPrompt); setPrintPrompt(null); }}>Sim, imprimir</AlertDialogAction>
           </AlertDialogFooter>
@@ -917,6 +936,21 @@ function PdvPage() {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => {
+                    setWhatsappSend({
+                      tipo: "nfce",
+                      receiptNumber: nfceState.receiptNumber,
+                      danfe_url: nfceState.danfe_url,
+                    });
+                    setNfceState(null);
+                  }}
+                >
+                  <MessageCircle className="h-4 w-4" style={{ color: "#25D366" }} />
+                  Enviar por WhatsApp
+                </Button>
                 {nfceState.danfe_url && (
                   <AlertDialogAction asChild>
                     <a href={nfceState.danfe_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5">
@@ -960,6 +994,15 @@ function PdvPage() {
           )}
         </AlertDialogContent>
       </AlertDialog>
+
+      <WhatsappSendDialog
+        open={!!whatsappSend}
+        onClose={() => setWhatsappSend(null)}
+        tipo={whatsappSend?.tipo ?? "cupom"}
+        receiptNumber={whatsappSend?.receiptNumber ?? 0}
+        danfe_url={whatsappSend?.danfe_url}
+        receipt={whatsappSend?.receipt}
+      />
     </div>
   );
 }
