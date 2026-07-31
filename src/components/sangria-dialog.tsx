@@ -187,7 +187,7 @@ function SangriaBody({ sangria }: { sangria: SangriaRecibo }) {
 
   return (
     <div>
-      <div className="text-center font-black tracking-wide">BURATIN OUTLET</div>
+      <div className="text-center font-black tracking-wide">PDVGtech</div>
       <div className="text-center font-bold text-xs">Comprovante Não Fiscal</div>
       <div className="text-center text-xs">{formatDateTime(sangria.created_at)}</div>
 

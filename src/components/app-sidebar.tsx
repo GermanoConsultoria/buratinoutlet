@@ -9,7 +9,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo-gtech-sem-fundo.png";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { temAcesso, isOwner, type Modulo } from "@/lib/auth";
@@ -84,13 +84,13 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border">
+      <SidebarHeader className="border-b border-sidebar-border" style={{ background: "linear-gradient(180deg, oklch(0.22 0.14 255) 0%, oklch(0.17 0.1 250) 100%)" }}>
         <div className="flex items-center gap-2 px-2 py-2">
-          <img src={logo} alt="Buratin" className="h-9 w-9 rounded-md object-contain bg-white/10 p-0.5" />
+          <img src={logo} alt="PDVGtech" className="h-9 w-9 rounded-md object-contain bg-white/10 p-0.5" />
           {!collapsed && (
             <div className="flex flex-col leading-tight">
-              <span className="text-sm font-bold text-sidebar-foreground">BURATIN</span>
-              <span className="text-[10px] uppercase tracking-widest text-sidebar-primary">Outlet</span>
+              <span className="text-sm font-bold text-sidebar-foreground">PDVGtech</span>
+              <span className="text-[10px] uppercase tracking-widest text-sidebar-primary">Sistema</span>
             </div>
           )}
         </div>

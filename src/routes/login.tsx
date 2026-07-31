@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo-gtech-sem-fundo.png";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -55,8 +55,8 @@ function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--gradient-brand)" }}>
       <div className="w-full max-w-md bg-card rounded-2xl shadow-2xl p-8">
         <div className="flex flex-col items-center mb-6">
-          <img src={logo} alt="Buratin Outlet" className="h-20 w-20 object-contain" />
-          <h1 className="mt-3 text-2xl font-bold tracking-tight">Buratin Outlet</h1>
+          <img src={logo} alt="PDVGtech" className="h-20 w-20 object-contain" />
+          <h1 className="mt-3 text-2xl font-bold tracking-tight">PDVGtech</h1>
           <p className="text-sm text-muted-foreground">Sistema de gestão</p>
         </div>
 

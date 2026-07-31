@@ -2,14 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useRef } from "react";
-import { listProducts, upsertProduct, deleteProduct, bulkImportProducts } from "@/lib/products.functions";
+import { listProducts, upsertProduct, deleteProduct, bulkImportProducts, updateAllProductsIbsCbs } from "@/lib/products.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Download, Pencil, Trash2, Package, FileSpreadsheet } from "lucide-react";
+import { Plus, Download, Pencil, Trash2, Package, FileSpreadsheet, Settings } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { formatBRL } from "@/lib/format";
@@ -33,6 +33,17 @@ type Product = {
   cfop?: string | null;
   icms_origem?: string | null;
   icms_situacao_tributaria?: string | null;
+  ibs_cbs_situacao_tributaria?: string | null;
+  ibs_cbs_classificacao_tributaria?: string | null;
+  cbs_aliquota?: number | null;
+  ibs_aliquota_total?: number | null;
+};
+
+const IBS_CBS_DEFAULTS = {
+  situacao: "000",
+  classificacao: "000001",
+  cbs_aliquota: 0.9,
+  ibs_aliquota_total: 0.1,
 };
 
 function ProdutosPage() {
@@ -40,6 +51,7 @@ function ProdutosPage() {
   const upsert = useServerFn(upsertProduct);
   const del = useServerFn(deleteProduct);
   const bulk = useServerFn(bulkImportProducts);
+  const updateAllIbs = useServerFn(updateAllProductsIbsCbs);
   const qc = useQueryClient();
 
   const { data: products = [], isLoading } = useQuery({
@@ -64,6 +76,10 @@ function ProdutosPage() {
   const [cfop, setCfop] = useState("");
   const [icmsOrigem, setIcmsOrigem] = useState("0");
   const [icmsSituacao, setIcmsSituacao] = useState("");
+  const [ibsCbsSituacao, setIbsCbsSituacao] = useState("");
+  const [ibsCbsClassificacao, setIbsCbsClassificacao] = useState("");
+  const [cbsAliquota, setCbsAliquota] = useState("");
+  const [ibsAliquotaTotal, setIbsAliquotaTotal] = useState("");
   const [search, setSearch] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("TODAS");
   const [loteFiltro, setLoteFiltro] = useState("TODOS");
@@ -71,6 +87,12 @@ function ProdutosPage() {
   const [showLoteModal, setShowLoteModal] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const xlsxRef = useRef<HTMLInputElement>(null);
+
+  const [ibsGlobalOpen, setIbsGlobalOpen] = useState(false);
+  const [ibsGlobalSituacao, setIbsGlobalSituacao] = useState(IBS_CBS_DEFAULTS.situacao);
+  const [ibsGlobalClassificacao, setIbsGlobalClassificacao] = useState(IBS_CBS_DEFAULTS.classificacao);
+  const [ibsGlobalCbs, setIbsGlobalCbs] = useState(String(IBS_CBS_DEFAULTS.cbs_aliquota));
+  const [ibsGlobalIbs, setIbsGlobalIbs] = useState(String(IBS_CBS_DEFAULTS.ibs_aliquota_total));
 
   const categoriaFinal = category === "__nova__" ? novaCategoria : category;
   const subcategoriaFinal = subcategory === "__nova__" ? novaSubcategoria : subcategory;
@@ -93,6 +115,10 @@ function ProdutosPage() {
           cfop: cfop || null,
           icms_origem: icmsOrigem || null,
           icms_situacao_tributaria: icmsSituacao || null,
+          ibs_cbs_situacao_tributaria: ibsCbsSituacao || null,
+          ibs_cbs_classificacao_tributaria: ibsCbsClassificacao || null,
+          cbs_aliquota: (() => { const v = parseFloat(cbsAliquota.replace(",", ".")); return cbsAliquota !== "" && !isNaN(v) ? v : null; })(),
+          ibs_aliquota_total: (() => { const v = parseFloat(ibsAliquotaTotal.replace(",", ".")); return ibsAliquotaTotal !== "" && !isNaN(v) ? v : null; })(),
         },
       }),
     onSuccess: () => {
@@ -112,6 +138,24 @@ function ProdutosPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const updateAllIbsMut = useMutation({
+    mutationFn: () =>
+      updateAllIbs({
+        data: {
+          ibs_cbs_situacao_tributaria: ibsGlobalSituacao,
+          ibs_cbs_classificacao_tributaria: ibsGlobalClassificacao,
+          cbs_aliquota: parseFloat(ibsGlobalCbs.replace(",", ".")) || 0,
+          ibs_aliquota_total: parseFloat(ibsGlobalIbs.replace(",", ".")) || 0,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Campos IBS/CBS atualizados em todos os produtos");
+      setIbsGlobalOpen(false);
+      qc.invalidateQueries({ queryKey: ["products"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const openNew = () => {
     setEditing(null);
     setName(""); setSku(""); setPrice(""); setCost("");
@@ -119,6 +163,10 @@ function ProdutosPage() {
     setDataEntrada(""); setEndereco("");
     setNovaCategoria(""); setNovaSubcategoria("");
     setNcm(""); setCfop(""); setIcmsOrigem("0"); setIcmsSituacao("");
+    setIbsCbsSituacao(ibsGlobalSituacao);
+    setIbsCbsClassificacao(ibsGlobalClassificacao);
+    setCbsAliquota(ibsGlobalCbs);
+    setIbsAliquotaTotal(ibsGlobalIbs);
     setOpen(true);
   };
 
@@ -142,13 +190,17 @@ function ProdutosPage() {
     setCfop(p.cfop ?? "");
     setIcmsOrigem(p.icms_origem ?? "0");
     setIcmsSituacao(p.icms_situacao_tributaria ?? "");
+    setIbsCbsSituacao(p.ibs_cbs_situacao_tributaria ?? ibsGlobalSituacao);
+    setIbsCbsClassificacao(p.ibs_cbs_classificacao_tributaria ?? ibsGlobalClassificacao);
+    setCbsAliquota(p.cbs_aliquota != null ? String(p.cbs_aliquota) : ibsGlobalCbs);
+    setIbsAliquotaTotal(p.ibs_aliquota_total != null ? String(p.ibs_aliquota_total) : ibsGlobalIbs);
     setOpen(true);
   };
 
   const handleExportCsv = () => {
     if (products.length === 0) return toast.error("Nenhum produto para exportar.");
     const wsData = (products as Product[]).map((p) => {
-      const row = new Array(23).fill(null);
+      const row = new Array(25).fill(null);
       row[3]  = p.sku ?? "";
       row[8]  = p.name;
       row[12] = p.cost ?? 0;
@@ -162,9 +214,11 @@ function ProdutosPage() {
       row[20] = p.cfop ?? "";
       row[21] = p.icms_origem ?? "";
       row[22] = p.icms_situacao_tributaria ?? "";
+      row[23] = p.cbs_aliquota ?? "";
+      row[24] = p.ibs_aliquota_total ?? "";
       return row;
     });
-    const header = new Array(23).fill(null);
+    const header = new Array(25).fill(null);
     header[3]  = "Código ML";
     header[8]  = "Descrição do item";
     header[12] = "Custo";
@@ -178,6 +232,8 @@ function ProdutosPage() {
     header[20] = "CFOP";
     header[21] = "Origem ICMS";
     header[22] = "Situação Tributária ICMS";
+    header[23] = "CBS";
+    header[24] = "IBS";
     const ws = XLSX.utils.aoa_to_sheet([header, ...wsData]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Produtos");
@@ -192,8 +248,10 @@ function ProdutosPage() {
       const wb = XLSX.read(buf, { type: "array", cellFormula: false });
       const ws = wb.Sheets[wb.SheetNames[0]];
       if (!ws) return toast.error("Planilha vazia");
+      const decoded = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+      decoded.s.c = 0;
       const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, {
-        header: 1, defval: null, raw: true,
+        header: 1, defval: null, raw: true, range: decoded,
       }) as (string | number | null)[][];
 
       let headerIdx = -1;
@@ -219,10 +277,16 @@ function ProdutosPage() {
           const endereco          = r[17] != null ? String(r[17]).trim() : null;
           const dataEntrada       = r[18] != null ? String(r[18]).trim() : null;
           // Colunas fiscais (T–W) — ausentes em planilhas antigas: r[19..22] será null → campo fica null, sem quebrar importação
-          const ncmCol            = r[19] != null ? String(r[19]).trim() : null;
+          const ncmRaw            = r[19] != null ? String(r[19]).replace(/\D/g, "").trim() : null;
+          const ncmCol            = ncmRaw || null;
           const cfopCol           = r[20] != null ? String(r[20]).trim() : null;
           const icmsOrigemCol     = r[21] != null ? String(r[21]).trim() : null;
           const icmsSituacaoCol   = r[22] != null ? String(r[22]).trim() : null;
+          // Reforma Tributária — colunas X (CBS) e Y (IBS): ausentes em planilhas antigas → null
+          const cbsAliquotaRaw    = typeof r[23] === "number" ? r[23] : (r[23] != null ? parseFloat(String(r[23]).replace(",", ".")) : NaN);
+          const cbsAliquotaCol    = !isNaN(cbsAliquotaRaw) ? cbsAliquotaRaw : null;
+          const ibsAliquotaRaw    = typeof r[24] === "number" ? r[24] : (r[24] != null ? parseFloat(String(r[24]).replace(",", ".")) : NaN);
+          const ibsAliquotaTotalCol = !isNaN(ibsAliquotaRaw) ? ibsAliquotaRaw : null;
 
           let dataEntradaISO: string | null = null;
           if (dataEntrada) {
@@ -257,13 +321,25 @@ function ProdutosPage() {
             cfop: cfopCol || null,
             icms_origem: icmsOrigemCol || null,
             icms_situacao_tributaria: icmsSituacaoCol || null,
+            cbs_aliquota: cbsAliquotaCol,
+            ibs_aliquota_total: ibsAliquotaTotalCol,
           };
         })
         .filter((i) => i.name && i.name.length > 0);
 
       if (!items.length) return toast.error("Nenhum produto válido na planilha");
+
+      const ncmForaDoPadrao = items.filter((i) => i.ncm && i.ncm.length !== 8);
+      if (ncmForaDoPadrao.length > 0) {
+        toast.warning(`${ncmForaDoPadrao.length} produto(s) com NCM fora de 8 dígitos — revise com a contadora: ${ncmForaDoPadrao.map((i) => `${i.name} (${i.ncm})`).slice(0, 5).join(", ")}${ncmForaDoPadrao.length > 5 ? "…" : ""}`);
+      }
+
       const res = await bulk({ data: { items, lote: lote || null } });
-      toast.success(`${res.count} produtos importados da planilha`);
+      const partes = [];
+      if (res.count > 0) partes.push(`${res.count} inserido(s)`);
+      if (res.updated > 0) partes.push(`${res.updated} atualizado(s) com dados fiscais`);
+      if (res.skipped > 0) partes.push(`${res.skipped} sem alteração`);
+      toast.success(`Importação concluída — ${partes.join(", ")}`);
       qc.invalidateQueries({ queryKey: ["products"] });
     } catch (e) {
       toast.error((e as Error).message);
@@ -311,6 +387,68 @@ function ProdutosPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Dialog open={ibsGlobalOpen} onOpenChange={setIbsGlobalOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4 mr-1" /> Configurar IBS/CBS
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Campos IBS/CBS — padrão global</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-muted-foreground">
+                Estes valores são aplicados a todos os produtos. Ao salvar, todos os produtos serão atualizados.
+              </p>
+              <div className="space-y-3 pt-1">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Situação Tributária IBS/CBS</Label>
+                    <Input
+                      value={ibsGlobalSituacao}
+                      onChange={(e) => setIbsGlobalSituacao(e.target.value)}
+                      maxLength={20}
+                    />
+                  </div>
+                  <div>
+                    <Label>Classificação Tributária IBS/CBS</Label>
+                    <Input
+                      value={ibsGlobalClassificacao}
+                      onChange={(e) => setIbsGlobalClassificacao(e.target.value)}
+                      maxLength={20}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Alíquota CBS (%)</Label>
+                    <Input
+                      inputMode="decimal"
+                      value={ibsGlobalCbs}
+                      onChange={(e) => setIbsGlobalCbs(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Alíquota IBS total (%)</Label>
+                    <Input
+                      inputMode="decimal"
+                      value={ibsGlobalIbs}
+                      onChange={(e) => setIbsGlobalIbs(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIbsGlobalOpen(false)}>Cancelar</Button>
+                <Button
+                  onClick={() => updateAllIbsMut.mutate()}
+                  disabled={updateAllIbsMut.isPending}
+                >
+                  {updateAllIbsMut.isPending ? "Atualizando..." : `Aplicar a todos os produtos`}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Button variant="outline" onClick={handleExportCsv} disabled={products.length === 0}>
             <Download className="h-4 w-4 mr-1" /> Exportar CSV
           </Button>
@@ -463,6 +601,54 @@ function ProdutosPage() {
                       />
                     </div>
                   </div>
+
+                  {/* Reforma Tributária — IBS/CBS */}
+                  <div className="mt-3 pt-3 border-t border-dashed">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
+                        Reforma Tributária (IBS/CBS)
+                      </p>
+                      <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                        Gerenciado globalmente — use "Configurar IBS/CBS" para alterar
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Situação Tributária IBS/CBS</Label>
+                        <Input
+                          value={ibsCbsSituacao}
+                          readOnly
+                          className="bg-muted/40 cursor-default"
+                        />
+                      </div>
+                      <div>
+                        <Label>Classificação Tributária IBS/CBS</Label>
+                        <Input
+                          value={ibsCbsClassificacao}
+                          readOnly
+                          className="bg-muted/40 cursor-default"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 mt-3">
+                      <div>
+                        <Label>Alíquota CBS (%)</Label>
+                        <Input
+                          value={cbsAliquota}
+                          readOnly
+                          className="bg-muted/40 cursor-default"
+                        />
+                      </div>
+                      <div>
+                        <Label>Alíquota IBS total (%)</Label>
+                        <Input
+                          value={ibsAliquotaTotal}
+                          readOnly
+                          className="bg-muted/40 cursor-default"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
               <DialogFooter>
@@ -579,7 +765,8 @@ function ProdutosPage() {
         </div>
         <p className="text-xs text-muted-foreground mt-3">
           Planilha XLSX: <code>D</code> (Código ML), <code>I</code> (Descrição), <code>M</code> (Custo), <code>N</code> (Venda), <code>O</code> (Categoria), <code>P</code> (Subcategoria), <code>Q</code> (Lote), <code>R</code> (Cidade/Endereço), <code>S</code> (Data de entrada){" "}
-          · Fiscal: <code>T</code> (NCM), <code>U</code> (CFOP), <code>V</code> (Origem ICMS), <code>W</code> (Situação Tributária ICMS).
+          · Fiscal: <code>T</code> (NCM), <code>U</code> (CFOP), <code>V</code> (Origem ICMS), <code>W</code> (Situação Tributária ICMS){" "}
+          · Reforma Tributária: <code>X</code> (CBS — alíquota), <code>Y</code> (IBS — alíquota total).
         </p>
         <p className="text-xs text-muted-foreground mt-1">
           <span className="font-medium">Coluna V — Origem ICMS</span> (código numérico):

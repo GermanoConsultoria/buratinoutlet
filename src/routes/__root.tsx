@@ -54,8 +54,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Buratin Outlet — Sistema" },
-      { name: "description", content: "Sistema de gestão Buratin Outlet — PDV, cadastros e financeiro." },
+      { title: "PDVGtech — Sistema" },
+      { name: "description", content: "Sistema de gestão PDVGtech — PDV, cadastros e financeiro." },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

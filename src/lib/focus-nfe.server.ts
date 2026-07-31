@@ -74,7 +74,7 @@ export async function emitirNfce(saleId: string, supabase: any): Promise<NfceRes
   const { data: saleItems, error: itemsErr } = await supabase
     .from("sale_items")
     .select(
-      "name, price, quantity, subtotal, desconto, product_id, products(ncm, cfop, icms_origem, icms_situacao_tributaria, sku)",
+      "name, price, quantity, subtotal, desconto, product_id, products(ncm, cfop, icms_origem, icms_situacao_tributaria, sku, ibs_cbs_situacao_tributaria, ibs_cbs_classificacao_tributaria, cbs_aliquota, ibs_aliquota_total)",
     )
     .eq("sale_id", saleId);
 
@@ -86,7 +86,13 @@ export async function emitirNfce(saleId: string, supabase: any): Promise<NfceRes
   const semClassificacao: string[] = [];
   for (const item of saleItems) {
     const prod = item.products;
-    if (!prod?.ncm || !prod?.cfop || !prod?.icms_situacao_tributaria) {
+    if (
+      !prod?.ncm ||
+      !prod?.cfop ||
+      !prod?.icms_situacao_tributaria ||
+      !prod?.ibs_cbs_situacao_tributaria ||
+      !prod?.ibs_cbs_classificacao_tributaria
+    ) {
       semClassificacao.push(item.name as string);
     }
   }
@@ -122,7 +128,17 @@ export async function emitirNfce(saleId: string, supabase: any): Promise<NfceRes
       unidade_tributavel: "UN",
       icms_origem: prod.icms_origem ?? "0",
       icms_situacao_tributaria: prod.icms_situacao_tributaria,
+      // Reforma Tributária — IBS/CBS
+      ibs_cbs_situacao_tributaria: prod.ibs_cbs_situacao_tributaria,
+      ibs_cbs_classificacao_tributaria: prod.ibs_cbs_classificacao_tributaria,
     };
+    if (prod.cbs_aliquota != null) entry.cbs_aliquota = Number(prod.cbs_aliquota);
+    if (prod.ibs_aliquota_total != null) {
+      // TEMPORÁRIO: aguardando confirmação da contadora sobre divisão UF/Município do IBS.
+      // Por enquanto, todo o valor vai para ibs_uf_aliquota e ibs_mun_aliquota = 0.
+      entry.ibs_uf_aliquota = Number(prod.ibs_aliquota_total);
+      entry.ibs_mun_aliquota = 0;
+    }
     if (desconto > 0) entry.desconto = desconto;
     return entry;
   });
@@ -176,6 +192,10 @@ export async function emitirNfce(saleId: string, supabase: any): Promise<NfceRes
 
   const json = (await resp.json()) as Record<string, unknown>;
 
+  // DEBUG TEMPORÁRIO — remover após confirmar o formato exato dos erros da Focus NFe
+  console.error("[Focus NFe] HTTP status:", resp.status);
+  console.error("[Focus NFe] Resposta bruta:", JSON.stringify(json, null, 2));
+
   if (json.status === "autorizado") {
     await supabase
       .from("sales")
@@ -189,6 +209,7 @@ export async function emitirNfce(saleId: string, supabase: any): Promise<NfceRes
         nfce_danfe_url: json.caminho_danfe ?? null,
         nfce_qrcode_url: json.qrcode_url ?? null,
         nfce_xml_url: json.caminho_xml_nota_fiscal ?? null,
+        nfce_erro_bruto: null,
       })
       .eq("id", saleId);
 
@@ -206,13 +227,34 @@ export async function emitirNfce(saleId: string, supabase: any): Promise<NfceRes
     };
   }
 
+  // Extrai a mensagem de erro mais específica disponível, em ordem de prioridade
+  let mensagemErro: string;
+  if (json.mensagem_sefaz && typeof json.mensagem_sefaz === "string") {
+    mensagemErro = json.mensagem_sefaz;
+  } else if (json.mensagem && typeof json.mensagem === "string") {
+    mensagemErro = json.mensagem;
+  } else if (Array.isArray(json.erros) && json.erros.length > 0) {
+    mensagemErro = (json.erros as { mensagem?: string; campo?: string }[])
+      .map((e) => (e.campo ? `${e.campo}: ${e.mensagem ?? ""}` : (e.mensagem ?? JSON.stringify(e))))
+      .join(" | ");
+  } else {
+    mensagemErro = "Erro desconhecido na Focus NFe.";
+  }
+
+  // Inclui o código de status da Focus no início para facilitar diagnóstico
+  const codigoStatus = typeof json.status === "string" ? json.status : null;
+  const mensagemFinal = codigoStatus
+    ? `[${codigoStatus}] ${mensagemErro}`
+    : mensagemErro;
+
   // Salva status de erro sem reverter a venda — ela já existe independente do resultado fiscal.
   await supabase
     .from("sales")
     .update({
-      nfce_status: (json.status as string) ?? "erro_autorizacao",
+      nfce_status: codigoStatus ?? "erro_autorizacao",
       nfce_status_sefaz: (json.status_sefaz as string | null) ?? null,
-      nfce_mensagem_sefaz: (json.mensagem_sefaz as string | null) ?? null,
+      nfce_mensagem_sefaz: mensagemFinal,
+      nfce_erro_bruto: json,
     })
     .eq("id", saleId);
 
@@ -220,6 +262,6 @@ export async function emitirNfce(saleId: string, supabase: any): Promise<NfceRes
     ok: false,
     status: "erro_autorizacao",
     status_sefaz: (json.status_sefaz as string) ?? "",
-    mensagem_sefaz: (json.mensagem_sefaz as string) ?? "Erro desconhecido na SEFAZ.",
+    mensagem_sefaz: mensagemFinal,
   };
 }

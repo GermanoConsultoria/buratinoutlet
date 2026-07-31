@@ -89,7 +89,7 @@ function ReceiptBody({ receipt, print = false }: { receipt: Receipt; print?: boo
   return (
     <div style={normalStyle}>
       <div className="text-center" style={titleStyle}>
-        <div className="font-black tracking-wide">BURATIN OUTLET</div>
+        <div className="font-black tracking-wide">PDVGtech</div>
       </div>
       <div className="text-center font-bold text-xs mt-0.5">Cupom Não Fiscal</div>
       <div className="text-center text-xs">{formatDateTime(receipt.created_at)}</div>

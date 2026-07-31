@@ -121,7 +121,7 @@ export function FechamentoDiarioDialog({ caixa, onClose }: Props) {
             <div id="print-fechamento" className="space-y-4">
               {/* Cabeçalho */}
               <div className="text-center border-b pb-3">
-                <div className="font-black text-lg">BURATIN OUTLET</div>
+                <div className="font-black text-lg">PDVGtech</div>
                 <div className="font-bold text-sm">FECHAMENTO DE CAIXA</div>
                 <div className="text-xs text-muted-foreground mt-1">
                   Emissão: {formatarData(new Date().toISOString())} {formatarHora(new Date().toISOString())}
@@ -428,7 +428,7 @@ export function FechamentoMensalDialog({ onClose }: { onClose: () => void }) {
 
         <div id="print-mensal" className="overflow-auto flex-1 p-5">
           <div className="text-center mb-4">
-            <div className="font-black text-lg">BURATIN OUTLET</div>
+            <div className="font-black text-lg">PDVGtech</div>
             <div className="font-bold">RELATÓRIO MENSAL — {meses[mes - 1]}/{ano}</div>
           </div>
 

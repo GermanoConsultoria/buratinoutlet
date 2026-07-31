@@ -192,6 +192,16 @@ export type Database = {
           sku: string | null
           subcategory: string | null
           updated_at: string
+          // Classificação fiscal (NFC-e)
+          ncm: string | null
+          cfop: string | null
+          icms_origem: string | null
+          icms_situacao_tributaria: string | null
+          // Reforma Tributária (IBS/CBS)
+          ibs_cbs_situacao_tributaria: string | null
+          ibs_cbs_classificacao_tributaria: string | null
+          cbs_aliquota: number | null
+          ibs_aliquota_total: number | null
         }
         Insert: {
           category?: string | null
@@ -207,6 +217,14 @@ export type Database = {
           sku?: string | null
           subcategory?: string | null
           updated_at?: string
+          ncm?: string | null
+          cfop?: string | null
+          icms_origem?: string | null
+          icms_situacao_tributaria?: string | null
+          ibs_cbs_situacao_tributaria?: string | null
+          ibs_cbs_classificacao_tributaria?: string | null
+          cbs_aliquota?: number | null
+          ibs_aliquota_total?: number | null
         }
         Update: {
           category?: string | null
@@ -222,6 +240,14 @@ export type Database = {
           sku?: string | null
           subcategory?: string | null
           updated_at?: string
+          ncm?: string | null
+          cfop?: string | null
+          icms_origem?: string | null
+          icms_situacao_tributaria?: string | null
+          ibs_cbs_situacao_tributaria?: string | null
+          ibs_cbs_classificacao_tributaria?: string | null
+          cbs_aliquota?: number | null
+          ibs_aliquota_total?: number | null
         }
         Relationships: []
       }

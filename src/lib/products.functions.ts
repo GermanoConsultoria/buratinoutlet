@@ -18,6 +18,11 @@ const productInput = z.object({
   cfop: z.string().max(10).nullable().optional(),
   icms_origem: z.string().max(1).nullable().optional(),
   icms_situacao_tributaria: z.string().max(10).nullable().optional(),
+  // Reforma Tributária — IBS/CBS
+  ibs_cbs_situacao_tributaria: z.string().max(20).nullable().optional(),
+  ibs_cbs_classificacao_tributaria: z.string().max(20).nullable().optional(),
+  cbs_aliquota: z.number().nonnegative().nullable().optional(),
+  ibs_aliquota_total: z.number().nonnegative().nullable().optional(),
 });
 
 export const listProducts = createServerFn({ method: "GET" })
@@ -30,7 +35,7 @@ export const listProducts = createServerFn({ method: "GET" })
     while (true) {
       const { data, error } = await context.supabase
         .from("products")
-        .select("id, name, sku, price, cost, category, subcategory, lote, data_entrada, endereco, ncm, cfop, icms_origem, icms_situacao_tributaria, created_at")
+        .select("id, name, sku, price, cost, category, subcategory, lote, data_entrada, endereco, ncm, cfop, icms_origem, icms_situacao_tributaria, ibs_cbs_situacao_tributaria, ibs_cbs_classificacao_tributaria, cbs_aliquota, ibs_aliquota_total, created_at")
         .order("name")
         .range(from, from + pageSize - 1);
 
@@ -61,12 +66,17 @@ export const upsertProduct = createServerFn({ method: "POST" })
       endereco: data.endereco?.trim() || null,
       updated_at: new Date().toISOString(),
     };
-    // Campos fiscais para NFC-e (não estão no tipo gerado do Supabase ainda)
+    // Campos fiscais para NFC-e
     const fiscalRow = {
       ncm: data.ncm?.trim() || null,
       cfop: data.cfop?.trim() || null,
       icms_origem: data.icms_origem ?? null,
       icms_situacao_tributaria: data.icms_situacao_tributaria?.trim() || null,
+      // Reforma Tributária — IBS/CBS
+      ibs_cbs_situacao_tributaria: data.ibs_cbs_situacao_tributaria?.trim() || null,
+      ibs_cbs_classificacao_tributaria: data.ibs_cbs_classificacao_tributaria?.trim() || null,
+      cbs_aliquota: data.cbs_aliquota ?? null,
+      ibs_aliquota_total: data.ibs_aliquota_total ?? null,
     };
     if (data.id) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -114,26 +124,29 @@ export const bulkImportProducts = createServerFn({ method: "POST" })
       cfop: i.cfop?.trim() || null,
       icms_origem: i.icms_origem ?? null,
       icms_situacao_tributaria: i.icms_situacao_tributaria?.trim() || null,
+      ibs_cbs_situacao_tributaria: i.ibs_cbs_situacao_tributaria?.trim() || null,
+      ibs_cbs_classificacao_tributaria: i.ibs_cbs_classificacao_tributaria?.trim() || null,
+      cbs_aliquota: i.cbs_aliquota ?? null,
+      ibs_aliquota_total: i.ibs_aliquota_total ?? null,
       created_by: context.userId,
     }));
 
     const { data: existing, error: fetchError } = await context.supabase
       .from("products")
-      .select("sku, name");
+      .select("id, sku, name");
     if (fetchError) throw new Error(fetchError.message);
 
-    const existingSet = new Set(
-      (existing ?? []).map((p: any) =>
-        `${(p.sku ?? "").trim().toLowerCase()}||${p.name.trim().toLowerCase()}`
-      )
+    const existingMap = new Map(
+      (existing ?? []).map((p: any) => [
+        `${(p.sku ?? "").trim().toLowerCase()}||${p.name.trim().toLowerCase()}`,
+        p.id as string,
+      ])
     );
 
     const newRows = rows.filter((r) => {
       const key = `${(r.sku ?? "").trim().toLowerCase()}||${r.name.trim().toLowerCase()}`;
-      return !existingSet.has(key);
+      return !existingMap.has(key);
     });
-
-    if (newRows.length === 0) return { ok: true, count: 0, skipped: rows.length };
 
     const chunk = 500;
     let count = 0;
@@ -144,5 +157,60 @@ export const bulkImportProducts = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       count += slice.length;
     }
-    return { ok: true, count, skipped: rows.length - count };
+
+    const existingRows = rows
+      .map((r) => {
+        const key = `${(r.sku ?? "").trim().toLowerCase()}||${r.name.trim().toLowerCase()}`;
+        const id = existingMap.get(key);
+        if (!id) return null;
+        const fiscais: Record<string, unknown> = {};
+        if (r.ncm) fiscais.ncm = r.ncm;
+        if (r.cfop) fiscais.cfop = r.cfop;
+        if (r.icms_origem != null) fiscais.icms_origem = String(r.icms_origem);
+        if (r.icms_situacao_tributaria) fiscais.icms_situacao_tributaria = r.icms_situacao_tributaria;
+        if (r.ibs_cbs_situacao_tributaria) fiscais.ibs_cbs_situacao_tributaria = r.ibs_cbs_situacao_tributaria;
+        if (r.ibs_cbs_classificacao_tributaria) fiscais.ibs_cbs_classificacao_tributaria = r.ibs_cbs_classificacao_tributaria;
+        if (r.cbs_aliquota != null) fiscais.cbs_aliquota = r.cbs_aliquota;
+        if (r.ibs_aliquota_total != null) fiscais.ibs_aliquota_total = r.ibs_aliquota_total;
+        if (Object.keys(fiscais).length === 0) return null;
+        return { id, fiscais };
+      })
+      .filter((x): x is { id: string; fiscais: Record<string, unknown> } => x !== null);
+
+    let updated = 0;
+    for (let i = 0; i < existingRows.length; i += chunk) {
+      const slice = existingRows.slice(i, i + chunk);
+      for (const { id, fiscais } of slice) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await context.supabase.from("products").update(fiscais as any).eq("id", id);
+        if (error) throw new Error(error.message);
+        updated++;
+      }
+    }
+
+    return { ok: true, count, updated, skipped: rows.length - count - updated };
+  });
+
+export const updateAllProductsIbsCbs = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({
+      ibs_cbs_situacao_tributaria: z.string().max(20),
+      ibs_cbs_classificacao_tributaria: z.string().max(20),
+      cbs_aliquota: z.number().nonnegative(),
+      ibs_aliquota_total: z.number().nonnegative(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("products")
+      .update({
+        ibs_cbs_situacao_tributaria: data.ibs_cbs_situacao_tributaria,
+        ibs_cbs_classificacao_tributaria: data.ibs_cbs_classificacao_tributaria,
+        cbs_aliquota: data.cbs_aliquota,
+        ibs_aliquota_total: data.ibs_aliquota_total,
+      })
+      .not("id", "is", null);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

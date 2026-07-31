@@ -1,37 +1,37 @@
 // CLIENTE
-{
-  "name": "buratinoutlet",
-  "main": "dist/server/server.js",
-  "compatibility_date": "2026-06-01",
-  "compatibility_flags": ["nodejs_compat"],
-  "observability": {
-    "enabled": true
-  },
-  "assets": {
-    "directory": "./dist/client"
-  },
-  "vars": {
-    "SUPABASE_URL": "https://rhoztlwuleftdcjmwwfy.supabase.co",
-    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJob3p0bHd1bGVmdGRjam13d2Z5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyODAzMjIsImV4cCI6MjA5NTg1NjMyMn0.VJyskob7_zszg1N8dPdBGkw82f6TiA7jkfJ6EIlNknA",
-    "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJob3p0bHd1bGVmdGRjam13d2Z5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDI4MDMyMiwiZXhwIjoyMDk1ODU2MzIyfQ.CAwMUB9ZSaDiIFRIf-SyqbMNiM9d4-S985ArFrTHfCo"
-  }
-}
+// {
+//   "name": "buratinoutlet",
+//   "main": "dist/server/server.js",
+//   "compatibility_date": "2026-06-01",
+//   "compatibility_flags": ["nodejs_compat"],
+//   "observability": {
+//     "enabled": true
+//   },
+//   "assets": {
+//     "directory": "./dist/client"
+//   },
+//   "vars": {
+//     "SUPABASE_URL": "https://rhoztlwuleftdcjmwwfy.supabase.co",
+//     "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJob3p0bHd1bGVmdGRjam13d2Z5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyODAzMjIsImV4cCI6MjA5NTg1NjMyMn0.VJyskob7_zszg1N8dPdBGkw82f6TiA7jkfJ6EIlNknA",
+//     "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJob3p0bHd1bGVmdGRjam13d2Z5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDI4MDMyMiwiZXhwIjoyMDk1ODU2MzIyfQ.CAwMUB9ZSaDiIFRIf-SyqbMNiM9d4-S985ArFrTHfCo"
+//   }
+// }
 
-// DEV
-//{
-//  "name": "buratinoutlet",
-//  "main": "dist/server/server.js",
-//  "compatibility_date": "2026-06-01",
-//  "compatibility_flags": ["nodejs_compat"],
-//  "observability": {
-//    "enabled": true
-//  },
-//  "assets": {
-//    "directory": "./dist/client"
-//  },
-//  "vars": {
-//    "SUPABASE_URL": "https://gfrcynhucafvmueqhqpk.supabase.co",
-//    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdmcmN5bmh1Y2Fmdm11ZXFocXBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2Mjk2OTAsImV4cCI6MjA5NjIwNTY5MH0.pheiH_AhQDI08HsNWD97qoa48xMUZf_syCbJv9P42JA",
-//    "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdmcmN5bmh1Y2Fmdm11ZXFocXBrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDYyOTY5MCwiZXhwIjoyMDk2MjA1NjkwfQ.O8qVv9lHM71hpatusa_njal6PT-mFeMtlpiD6f2mtRo"
-//  }
-//}
+//DEV
+{
+ "name": "buratinoutlet",
+ "main": "dist/server/server.js",
+ "compatibility_date": "2026-06-01",
+ "compatibility_flags": ["nodejs_compat"],
+ "observability": {
+   "enabled": true
+ },
+ "assets": {
+   "directory": "./dist/client"
+ },
+ "vars": {
+   "SUPABASE_URL": "https://krzabgooslpxsmdsevvo.supabase.co",
+   "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyemFiZ29vc2xweHNtZHNldnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1MzY3MjcsImV4cCI6MjEwMDExMjcyN30.pEGENW8CKBRhzvFCtH-EVPm54R2y_rKFPAe-u2mt08A",
+   "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyemFiZ29vc2xweHNtZHNldnZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDUzNjcyNywiZXhwIjoyMTAwMTEyNzI3fQ.5xrC8xgjIHpkJbxczH1vM7CZVU8hpEjNRXj0R_He7KA"
+ }
+}
