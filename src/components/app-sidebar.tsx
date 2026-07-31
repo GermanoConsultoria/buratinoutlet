@@ -54,9 +54,14 @@ const groups: NavGroup[] = [
     ],
   },
   {
-    label: "Configurações",
+    label: "Personalização",
     items: [
       { title: "Templates", url: "/templates", icon: Palette, modulo: "templates" },
+    ],
+  },
+  {
+    label: "Configurações",
+    items: [
       { title: "Usuários", url: "/config/usuarios", icon: Users, modulo: "configuracoes" },
       { title: "Plano de contas", url: "/config/plano-contas", icon: ListTree, modulo: "configuracoes" },
       { title: "Operadores", url: "/config/operadores", icon: Users, modulo: "configuracoes" },

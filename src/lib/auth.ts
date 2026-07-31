@@ -57,12 +57,17 @@ export async function getMyProfile(): Promise<UserProfile | null> {
   };
 }
 
+// Módulos acessíveis a qualquer usuário ativo independente de permissões
+const MODULOS_PUBLICOS: Modulo[] = ["templates"];
+
 // Verifica se o usuário tem acesso a um módulo
 export function temAcesso(profile: UserProfile | null, modulo: Modulo): boolean {
   if (!profile) return false;
   if (!profile.ativo) return false;
   // OWNER sempre tem acesso a tudo
   if (profile.role === "OWNER") return true;
+  // Módulos de uso pessoal não precisam de permissão explícita
+  if (MODULOS_PUBLICOS.includes(modulo)) return true;
   return profile.modulos.includes(modulo);
 }
 
