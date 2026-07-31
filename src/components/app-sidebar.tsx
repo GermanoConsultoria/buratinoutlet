@@ -132,9 +132,9 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border">
+      <SidebarFooter className="border-t border-sidebar-border bg-sidebar shrink-0">
         {profile && (
-          <div className="px-3 py-2 text-xs text-sidebar-foreground/60 border-b border-sidebar-border mb-1">
+          <div className="px-3 py-2 text-xs text-sidebar-foreground/60 border-b border-sidebar-border mb-1 bg-sidebar">
             <p className="font-medium text-sidebar-foreground truncate">{profile.full_name ?? "Usuário"}</p>
             <p className="capitalize">{profile.role === "OWNER" ? "Administrador" : profile.role === "MANAGER" ? "Gerente" : "Usuário"}</p>
           </div>
