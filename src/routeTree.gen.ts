@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppVendasRouteImport } from './routes/_app/vendas'
+import { Route as AppTemplatesRouteImport } from './routes/_app/templates'
 import { Route as AppProdutosRouteImport } from './routes/_app/produtos'
 import { Route as AppPdvRouteImport } from './routes/_app/pdv'
 import { Route as AppHistoricoVendasRouteImport } from './routes/_app/historico-vendas'
@@ -44,6 +45,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppVendasRoute = AppVendasRouteImport.update({
   id: '/vendas',
   path: '/vendas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTemplatesRoute = AppTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
   getParentRoute: () => AppRoute,
 } as any)
 const AppProdutosRoute = AppProdutosRouteImport.update({
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/historico-vendas': typeof AppHistoricoVendasRoute
   '/pdv': typeof AppPdvRoute
   '/produtos': typeof AppProdutosRoute
+  '/templates': typeof AppTemplatesRoute
   '/vendas': typeof AppVendasRoute
   '/cadastros/clientes': typeof AppCadastrosClientesRoute
   '/cadastros/fornecedores': typeof AppCadastrosFornecedoresRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/historico-vendas': typeof AppHistoricoVendasRoute
   '/pdv': typeof AppPdvRoute
   '/produtos': typeof AppProdutosRoute
+  '/templates': typeof AppTemplatesRoute
   '/vendas': typeof AppVendasRoute
   '/cadastros/clientes': typeof AppCadastrosClientesRoute
   '/cadastros/fornecedores': typeof AppCadastrosFornecedoresRoute
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   '/_app/historico-vendas': typeof AppHistoricoVendasRoute
   '/_app/pdv': typeof AppPdvRoute
   '/_app/produtos': typeof AppProdutosRoute
+  '/_app/templates': typeof AppTemplatesRoute
   '/_app/vendas': typeof AppVendasRoute
   '/_app/cadastros/clientes': typeof AppCadastrosClientesRoute
   '/_app/cadastros/fornecedores': typeof AppCadastrosFornecedoresRoute
@@ -178,6 +187,7 @@ export interface FileRouteTypes {
     | '/historico-vendas'
     | '/pdv'
     | '/produtos'
+    | '/templates'
     | '/vendas'
     | '/cadastros/clientes'
     | '/cadastros/fornecedores'
@@ -196,6 +206,7 @@ export interface FileRouteTypes {
     | '/historico-vendas'
     | '/pdv'
     | '/produtos'
+    | '/templates'
     | '/vendas'
     | '/cadastros/clientes'
     | '/cadastros/fornecedores'
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/_app/historico-vendas'
     | '/_app/pdv'
     | '/_app/produtos'
+    | '/_app/templates'
     | '/_app/vendas'
     | '/_app/cadastros/clientes'
     | '/_app/cadastros/fornecedores'
@@ -262,6 +274,13 @@ declare module '@tanstack/react-router' {
       path: '/vendas'
       fullPath: '/vendas'
       preLoaderRoute: typeof AppVendasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/templates': {
+      id: '/_app/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof AppTemplatesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/produtos': {
@@ -362,6 +381,7 @@ interface AppRouteChildren {
   AppHistoricoVendasRoute: typeof AppHistoricoVendasRoute
   AppPdvRoute: typeof AppPdvRoute
   AppProdutosRoute: typeof AppProdutosRoute
+  AppTemplatesRoute: typeof AppTemplatesRoute
   AppVendasRoute: typeof AppVendasRoute
   AppCadastrosClientesRoute: typeof AppCadastrosClientesRoute
   AppCadastrosFornecedoresRoute: typeof AppCadastrosFornecedoresRoute
@@ -379,6 +399,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppHistoricoVendasRoute: AppHistoricoVendasRoute,
   AppPdvRoute: AppPdvRoute,
   AppProdutosRoute: AppProdutosRoute,
+  AppTemplatesRoute: AppTemplatesRoute,
   AppVendasRoute: AppVendasRoute,
   AppCadastrosClientesRoute: AppCadastrosClientesRoute,
   AppCadastrosFornecedoresRoute: AppCadastrosFornecedoresRoute,

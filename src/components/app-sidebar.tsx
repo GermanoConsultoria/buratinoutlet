@@ -1,7 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   ShoppingCart, Package, Receipt, Wallet, ArrowDownCircle, ArrowUpCircle,
-  BarChart3, Users, ListTree, LogOut, History, Building2,
+  BarChart3, Users, ListTree, LogOut, History, Building2, Palette,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -56,6 +56,7 @@ const groups: NavGroup[] = [
   {
     label: "Configurações",
     items: [
+      { title: "Templates", url: "/templates", icon: Palette, modulo: "templates" },
       { title: "Usuários", url: "/config/usuarios", icon: Users, modulo: "configuracoes" },
       { title: "Plano de contas", url: "/config/plano-contas", icon: ListTree, modulo: "configuracoes" },
       { title: "Operadores", url: "/config/operadores", icon: Users, modulo: "configuracoes" },
