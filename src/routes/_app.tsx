@@ -34,14 +34,14 @@ function AppLayout() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="flex h-svh w-full overflow-hidden bg-background">
         <AppSidebar />
-        <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 flex items-center border-b bg-card/50 backdrop-blur px-4 gap-3 sticky top-0 z-10">
+        <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
+          <header className="h-14 shrink-0 flex items-center border-b bg-card/50 backdrop-blur px-4 gap-3 z-10">
             <SidebarTrigger />
             <div className="text-sm font-medium text-muted-foreground">PDVGtech</div>
           </header>
-          <main className="flex-1 p-4 md:p-6 min-w-0">
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 min-w-0">
             <Outlet />
           </main>
         </div>
