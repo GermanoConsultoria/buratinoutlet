@@ -24,6 +24,8 @@ import { Route as AppFinanceiroBalanceteRouteImport } from './routes/_app/financ
 import { Route as AppConfigUsuariosRouteImport } from './routes/_app/config.usuarios'
 import { Route as AppConfigPlanoContasRouteImport } from './routes/_app/config.plano-contas'
 import { Route as AppConfigOperadoresRouteImport } from './routes/_app/config.operadores'
+import { Route as AppCadastrosFornecedoresRouteImport } from './routes/_app/cadastros.fornecedores'
+import { Route as AppCadastrosClientesRouteImport } from './routes/_app/cadastros.clientes'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -100,6 +102,17 @@ const AppConfigOperadoresRoute = AppConfigOperadoresRouteImport.update({
   path: '/config/operadores',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCadastrosFornecedoresRoute =
+  AppCadastrosFornecedoresRouteImport.update({
+    id: '/cadastros/fornecedores',
+    path: '/cadastros/fornecedores',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppCadastrosClientesRoute = AppCadastrosClientesRouteImport.update({
+  id: '/cadastros/clientes',
+  path: '/cadastros/clientes',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -108,6 +121,8 @@ export interface FileRoutesByFullPath {
   '/pdv': typeof AppPdvRoute
   '/produtos': typeof AppProdutosRoute
   '/vendas': typeof AppVendasRoute
+  '/cadastros/clientes': typeof AppCadastrosClientesRoute
+  '/cadastros/fornecedores': typeof AppCadastrosFornecedoresRoute
   '/config/operadores': typeof AppConfigOperadoresRoute
   '/config/plano-contas': typeof AppConfigPlanoContasRoute
   '/config/usuarios': typeof AppConfigUsuariosRoute
@@ -124,6 +139,8 @@ export interface FileRoutesByTo {
   '/pdv': typeof AppPdvRoute
   '/produtos': typeof AppProdutosRoute
   '/vendas': typeof AppVendasRoute
+  '/cadastros/clientes': typeof AppCadastrosClientesRoute
+  '/cadastros/fornecedores': typeof AppCadastrosFornecedoresRoute
   '/config/operadores': typeof AppConfigOperadoresRoute
   '/config/plano-contas': typeof AppConfigPlanoContasRoute
   '/config/usuarios': typeof AppConfigUsuariosRoute
@@ -142,6 +159,8 @@ export interface FileRoutesById {
   '/_app/pdv': typeof AppPdvRoute
   '/_app/produtos': typeof AppProdutosRoute
   '/_app/vendas': typeof AppVendasRoute
+  '/_app/cadastros/clientes': typeof AppCadastrosClientesRoute
+  '/_app/cadastros/fornecedores': typeof AppCadastrosFornecedoresRoute
   '/_app/config/operadores': typeof AppConfigOperadoresRoute
   '/_app/config/plano-contas': typeof AppConfigPlanoContasRoute
   '/_app/config/usuarios': typeof AppConfigUsuariosRoute
@@ -160,6 +179,8 @@ export interface FileRouteTypes {
     | '/pdv'
     | '/produtos'
     | '/vendas'
+    | '/cadastros/clientes'
+    | '/cadastros/fornecedores'
     | '/config/operadores'
     | '/config/plano-contas'
     | '/config/usuarios'
@@ -176,6 +197,8 @@ export interface FileRouteTypes {
     | '/pdv'
     | '/produtos'
     | '/vendas'
+    | '/cadastros/clientes'
+    | '/cadastros/fornecedores'
     | '/config/operadores'
     | '/config/plano-contas'
     | '/config/usuarios'
@@ -193,6 +216,8 @@ export interface FileRouteTypes {
     | '/_app/pdv'
     | '/_app/produtos'
     | '/_app/vendas'
+    | '/_app/cadastros/clientes'
+    | '/_app/cadastros/fornecedores'
     | '/_app/config/operadores'
     | '/_app/config/plano-contas'
     | '/_app/config/usuarios'
@@ -316,6 +341,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfigOperadoresRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/cadastros/fornecedores': {
+      id: '/_app/cadastros/fornecedores'
+      path: '/cadastros/fornecedores'
+      fullPath: '/cadastros/fornecedores'
+      preLoaderRoute: typeof AppCadastrosFornecedoresRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/cadastros/clientes': {
+      id: '/_app/cadastros/clientes'
+      path: '/cadastros/clientes'
+      fullPath: '/cadastros/clientes'
+      preLoaderRoute: typeof AppCadastrosClientesRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -324,6 +363,8 @@ interface AppRouteChildren {
   AppPdvRoute: typeof AppPdvRoute
   AppProdutosRoute: typeof AppProdutosRoute
   AppVendasRoute: typeof AppVendasRoute
+  AppCadastrosClientesRoute: typeof AppCadastrosClientesRoute
+  AppCadastrosFornecedoresRoute: typeof AppCadastrosFornecedoresRoute
   AppConfigOperadoresRoute: typeof AppConfigOperadoresRoute
   AppConfigPlanoContasRoute: typeof AppConfigPlanoContasRoute
   AppConfigUsuariosRoute: typeof AppConfigUsuariosRoute
@@ -339,6 +380,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppPdvRoute: AppPdvRoute,
   AppProdutosRoute: AppProdutosRoute,
   AppVendasRoute: AppVendasRoute,
+  AppCadastrosClientesRoute: AppCadastrosClientesRoute,
+  AppCadastrosFornecedoresRoute: AppCadastrosFornecedoresRoute,
   AppConfigOperadoresRoute: AppConfigOperadoresRoute,
   AppConfigPlanoContasRoute: AppConfigPlanoContasRoute,
   AppConfigUsuariosRoute: AppConfigUsuariosRoute,

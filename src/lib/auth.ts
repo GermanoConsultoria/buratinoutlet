@@ -5,6 +5,8 @@ export type Modulo =
   | "historico_vendas"
   | "vendas"
   | "produtos"
+  | "fornecedores"
+  | "clientes"
   | "financeiro"
   | "configuracoes";
 
@@ -13,6 +15,8 @@ export const MODULOS_LABELS: Record<Modulo, string> = {
   historico_vendas: "Histórico de Vendas",
   vendas: "Vendas",
   produtos: "Produtos",
+  fornecedores: "Fornecedores",
+  clientes: "Clientes",
   financeiro: "Financeiro",
   configuracoes: "Configurações",
 };
@@ -73,6 +77,6 @@ export function isManagerOrOwner(profile: UserProfile | null): boolean {
 // Módulos padrão por role ao criar usuário
 export const MODULOS_PADRAO: Record<Role, Modulo[]> = {
   USER: ["pdv", "historico_vendas"],
-  MANAGER: ["pdv", "vendas", "produtos"],
-  OWNER: ["pdv", "historico_vendas", "vendas", "produtos", "financeiro", "configuracoes"],
+  MANAGER: ["pdv", "vendas", "produtos", "fornecedores", "clientes"],
+  OWNER: ["pdv", "historico_vendas", "vendas", "produtos", "fornecedores", "clientes", "financeiro", "configuracoes"],
 };

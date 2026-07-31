@@ -1,7 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   ShoppingCart, Package, Receipt, Wallet, ArrowDownCircle, ArrowUpCircle,
-  BarChart3, Users, ListTree, LogOut, History,
+  BarChart3, Users, ListTree, LogOut, History, Building2,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -39,6 +39,8 @@ const groups: NavGroup[] = [
     label: "Cadastros",
     items: [
       { title: "Produtos", url: "/produtos", icon: Package, modulo: "produtos" },
+      { title: "Fornecedores", url: "/cadastros/fornecedores", icon: Building2, modulo: "fornecedores" },
+      { title: "Clientes", url: "/cadastros/clientes", icon: Users, modulo: "clientes" },
     ],
   },
   {
