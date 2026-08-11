@@ -191,6 +191,7 @@ export async function emitirNfce(saleId: string, supabase: any): Promise<NfceRes
   });
 
   const json = (await resp.json()) as Record<string, unknown>;
+  console.error("[FOCUS-DEBUG]", resp.status, resp.url, JSON.stringify(json));
 
   // DEBUG TEMPORÁRIO — remover após confirmar o formato exato dos erros da Focus NFe
   console.error("[Focus NFe] HTTP status:", resp.status);
