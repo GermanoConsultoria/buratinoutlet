@@ -72,6 +72,10 @@ function UsuariosPage() {
     getUsuarios().then((data) => setUsuarios(data as Profile[]));
   }
 
+  function handleDelete(id: string) {
+    setUsuarios((prev) => prev.filter((u) => u.id !== id));
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -150,7 +154,7 @@ function UsuariosPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <AcoesUsuario usuario={u} onUpdate={handleUpdate} />
+                      <AcoesUsuario usuario={u} onUpdate={handleUpdate} onDelete={handleDelete} />
                     </td>
                   </tr>
 

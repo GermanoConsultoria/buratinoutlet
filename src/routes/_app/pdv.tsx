@@ -66,7 +66,7 @@ type SangriaRecibo = {
 type NfceState =
   | null
   | { fase: "emitindo" }
-  | { fase: "autorizado"; chave: string; numero: string; serie: string; danfe_url: string | null; qrcode_url: string | null; receiptNumber: number }
+  | { fase: "autorizado"; chave: string; numero: string; serie: string; danfe_url: string | null; qrcode_url: string | null; receiptNumber: number; saleId: string }
   | { fase: "erro"; mensagem_sefaz: string; cupomReceipt: Receipt; receiptNumber: number };
 
 function PdvPage() {
@@ -438,6 +438,7 @@ function PdvPage() {
               danfe_url: resultado.danfe_url,
               qrcode_url: resultado.qrcode_url,
               receiptNumber: res.receipt_number,
+              saleId: res.id,
             });
           } else {
             setNfceState({
@@ -951,9 +952,9 @@ function PdvPage() {
                   <MessageCircle className="h-4 w-4" style={{ color: "#25D366" }} />
                   Enviar por WhatsApp
                 </Button>
-                {nfceState.danfe_url && (
+                {nfceState.saleId && (
                   <AlertDialogAction asChild>
-                    <a href={nfceState.danfe_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5">
+                    <a href={`/api/danfe/${nfceState.saleId}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5">
                       <ExternalLink className="h-4 w-4" />
                       Ver DANFCe / Imprimir
                     </a>

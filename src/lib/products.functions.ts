@@ -25,29 +25,55 @@ const productInput = z.object({
   ibs_aliquota_total: z.number().nonnegative().nullable().optional(),
 });
 
-export const listProducts = createServerFn({ method: "GET" })
+const listProductsInput = z.object({
+  page: z.number().int().min(0).default(0),
+  pageSize: z.number().int().min(1).max(10000).default(200),
+  search: z.string().max(200).default(""),
+  categoria: z.string().max(120).default(""),
+  lote: z.string().max(60).default(""),
+  hasNcm: z.boolean().default(false),
+});
+
+export const listProducts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => listProductsInput.parse(d ?? {}))
+  .handler(async ({ data, context }) => {
+    const { page, pageSize, search, categoria, lote, hasNcm } = data;
+
+    let query = context.supabase
+      .from("products")
+      .select(
+        "id,name,sku,price,cost,category,subcategory,lote,data_entrada,endereco,ncm,cfop,icms_origem,icms_situacao_tributaria,ibs_cbs_situacao_tributaria,ibs_cbs_classificacao_tributaria,cbs_aliquota,ibs_aliquota_total,created_at",
+        { count: "exact" }
+      )
+      .order("name")
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+
+    if (search) query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`);
+    if (categoria && categoria !== "TODAS") {
+      if (categoria === "Sem Categoria") query = query.or("category.is.null,category.eq.Sem Categoria");
+      else query = query.eq("category", categoria);
+    }
+    if (lote && lote !== "TODOS") query = query.eq("lote", lote);
+    if (hasNcm) query = query.not("ncm", "is", null).neq("ncm", "");
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: rows, error, count } = await (query as any);
+    if (error) throw new Error(error.message);
+    return { data: (rows ?? []) as any[], total: count ?? 0 };
+  });
+
+export const listProductsOptions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const pageSize = 1000;
-    let all: any[] = [];
-    let from = 0;
-
-    while (true) {
-      const { data, error } = await context.supabase
-        .from("products")
-        .select("id, name, sku, price, cost, category, subcategory, lote, data_entrada, endereco, ncm, cfop, icms_origem, icms_situacao_tributaria, ibs_cbs_situacao_tributaria, ibs_cbs_classificacao_tributaria, cbs_aliquota, ibs_aliquota_total, created_at")
-        .order("name")
-        .range(from, from + pageSize - 1);
-
-      if (error) throw new Error(error.message);
-      if (!data || data.length === 0) break;
-
-      all = all.concat(data);
-      if (data.length < pageSize) break;
-      from += pageSize;
-    }
-
-    return all;
+    const { data, error } = await context.supabase
+      .from("products")
+      .select("category,lote");
+    if (error) throw new Error(error.message);
+    const rows = data ?? [];
+    const categorias = [...new Set(rows.map((p: any) => p.category ?? "Sem Categoria"))].sort() as string[];
+    const lotes = [...new Set(rows.map((p: any) => p.lote).filter(Boolean))].sort() as string[];
+    return { categorias, lotes };
   });
 
 export const upsertProduct = createServerFn({ method: "POST" })
@@ -189,6 +215,40 @@ export const bulkImportProducts = createServerFn({ method: "POST" })
     }
 
     return { ok: true, count, updated, skipped: rows.length - count - updated };
+  });
+
+export const copiarClassificacaoFiscal = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({
+      origem_id: z.string().uuid(),
+      destino_ids: z.array(z.string().uuid()).min(1),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: origem, error: fetchError } = await context.supabase
+      .from("products")
+      .select("ncm, cfop, icms_origem, icms_situacao_tributaria, ibs_cbs_situacao_tributaria, ibs_cbs_classificacao_tributaria, cbs_aliquota, ibs_aliquota_total")
+      .eq("id", data.origem_id)
+      .single();
+    if (fetchError || !origem) throw new Error("Produto origem não encontrado");
+
+    const fiscal = {
+      ncm: origem.ncm,
+      cfop: origem.cfop,
+      icms_origem: origem.icms_origem,
+      icms_situacao_tributaria: origem.icms_situacao_tributaria,
+      ibs_cbs_situacao_tributaria: origem.ibs_cbs_situacao_tributaria,
+      ibs_cbs_classificacao_tributaria: origem.ibs_cbs_classificacao_tributaria,
+      cbs_aliquota: origem.cbs_aliquota,
+      ibs_aliquota_total: origem.ibs_aliquota_total,
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await context.supabase.from("products").update(fiscal as any).in("id", data.destino_ids);
+    if (error) throw new Error(error.message);
+
+    return { updated: data.destino_ids.length };
   });
 
 export const updateAllProductsIbsCbs = createServerFn({ method: "POST" })

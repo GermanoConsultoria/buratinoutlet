@@ -1,6 +1,34 @@
 import "./lib/error-capture";
+import process from "node:process";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+
+async function handleDanfeProxy(saleId: string): Promise<Response> {
+  const token = process.env.FOCUS_NFE_TOKEN;
+  const ambiente = process.env.FOCUS_NFE_AMBIENTE;
+  if (!token || !ambiente) {
+    return new Response("Focus NFe não configurado", { status: 503 });
+  }
+  const baseUrl =
+    ambiente === "producao"
+      ? "https://api.focusnfe.com.br"
+      : "https://homologacao.focusnfe.com.br";
+
+  const ref = `venda-${saleId}`;
+  const resp = await fetch(
+    `${baseUrl}/v2/nfce/${encodeURIComponent(ref)}/danfe`,
+    { headers: { Authorization: `Basic ${btoa(`${token}:`)}` } },
+  );
+  if (!resp.ok) {
+    return new Response(`Erro ao buscar DANFE: ${resp.status}`, { status: resp.status });
+  }
+  return new Response(resp.body, {
+    headers: {
+      "Content-Type": resp.headers.get("Content-Type") ?? "application/pdf",
+      "Content-Disposition": `inline; filename="danfce-${saleId}.pdf"`,
+    },
+  });
+}
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -36,6 +64,10 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    const url = new URL(request.url);
+    const danfeMatch = url.pathname.match(/^\/api\/danfe\/([^/]+)$/);
+    if (danfeMatch) return handleDanfeProxy(danfeMatch[1]);
+
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

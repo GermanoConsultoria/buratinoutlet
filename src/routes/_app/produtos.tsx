@@ -1,15 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useRef } from "react";
-import { listProducts, upsertProduct, deleteProduct, bulkImportProducts, updateAllProductsIbsCbs } from "@/lib/products.functions";
+import { useState, useRef, useEffect } from "react";
+import { listProducts, listProductsOptions, upsertProduct, deleteProduct, bulkImportProducts, updateAllProductsIbsCbs, copiarClassificacaoFiscal } from "@/lib/products.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Download, Pencil, Trash2, Package, FileSpreadsheet, Settings } from "lucide-react";
+import { Plus, Download, Pencil, Trash2, Package, FileSpreadsheet, Settings, Copy, ChevronLeft, ChevronRight } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { formatBRL } from "@/lib/format";
@@ -46,18 +47,47 @@ const IBS_CBS_DEFAULTS = {
   ibs_aliquota_total: 0.1,
 };
 
+const PAGE_SIZE = 200;
+const DESTINO_PAGE_SIZE = 100;
+
 function ProdutosPage() {
   const list = useServerFn(listProducts);
+  const listOpts = useServerFn(listProductsOptions);
   const upsert = useServerFn(upsertProduct);
   const del = useServerFn(deleteProduct);
   const bulk = useServerFn(bulkImportProducts);
   const updateAllIbs = useServerFn(updateAllProductsIbsCbs);
   const qc = useQueryClient();
 
-  const { data: products = [], isLoading } = useQuery({
-    queryKey: ["products"],
-    queryFn: () => list(),
+  // Filtros e paginação
+  const [searchDraft, setSearchDraft] = useState("");
+  const [search, setSearch] = useState("");
+  const [categoriaFiltro, setCategoriaFiltro] = useState("TODAS");
+  const [loteFiltro, setLoteFiltro] = useState("TODOS");
+  const [page, setPage] = useState(0);
+
+  // Debounce da busca principal
+  useEffect(() => {
+    const t = setTimeout(() => { setSearch(searchDraft); setPage(0); }, 350);
+    return () => clearTimeout(t);
+  }, [searchDraft]);
+
+  const { data: productsResult, isLoading } = useQuery({
+    queryKey: ["products", page, search, categoriaFiltro, loteFiltro],
+    queryFn: () => list({ data: { page, pageSize: PAGE_SIZE, search, categoria: categoriaFiltro, lote: loteFiltro } }),
+    placeholderData: (prev) => prev,
   });
+  const products = (productsResult?.data ?? []) as Product[];
+  const totalProducts = productsResult?.total ?? 0;
+  const totalPages = Math.ceil(totalProducts / PAGE_SIZE);
+
+  const { data: opts } = useQuery({
+    queryKey: ["products-options"],
+    queryFn: () => listOpts(),
+    staleTime: 60_000,
+  });
+  const categorias = opts?.categorias ?? [];
+  const lotes = opts?.lotes ?? [];
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
@@ -80,13 +110,50 @@ function ProdutosPage() {
   const [ibsCbsClassificacao, setIbsCbsClassificacao] = useState("");
   const [cbsAliquota, setCbsAliquota] = useState("");
   const [ibsAliquotaTotal, setIbsAliquotaTotal] = useState("");
-  const [search, setSearch] = useState("");
-  const [categoriaFiltro, setCategoriaFiltro] = useState("TODAS");
-  const [loteFiltro, setLoteFiltro] = useState("TODOS");
   const [loteImport, setLoteImport] = useState("");
   const [showLoteModal, setShowLoteModal] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const xlsxRef = useRef<HTMLInputElement>(null);
+
+  const copiarFiscal = useServerFn(copiarClassificacaoFiscal);
+
+  const [copiarOpen, setCopiarOpen] = useState(false);
+  const [origemSearch, setOrigemSearch] = useState("");
+  const [origemId, setOrigemId] = useState("");
+  const [destinoSearch, setDestinoSearch] = useState("");
+  const [destinoCategoria, setDestinoCategoria] = useState("TODAS");
+  const [destinoPage, setDestinoPage] = useState(0);
+  const [destinoIds, setDestinoIds] = useState<Set<string>>(new Set());
+
+  // Busca origem (só produtos com NCM)
+  const { data: origemResult } = useQuery({
+    queryKey: ["products-origem", origemSearch],
+    queryFn: () => list({ data: { search: origemSearch, hasNcm: true, pageSize: 20 } }),
+    enabled: copiarOpen && origemSearch.length >= 1 && !origemId,
+  });
+  const origemOptions = (origemResult?.data ?? []) as Product[];
+
+  // Lista destinos paginada
+  const { data: destinoResult } = useQuery({
+    queryKey: ["products-destino", destinoSearch, destinoCategoria, destinoPage],
+    queryFn: () => list({ data: { search: destinoSearch, categoria: destinoCategoria, page: destinoPage, pageSize: DESTINO_PAGE_SIZE } }),
+    enabled: copiarOpen,
+    placeholderData: (prev) => prev,
+  });
+  const destinoList = (destinoResult?.data ?? []) as Product[];
+  const destinoTotal = destinoResult?.total ?? 0;
+  const destinoTotalPages = Math.ceil(destinoTotal / DESTINO_PAGE_SIZE);
+
+  const copiarMut = useMutation({
+    mutationFn: () => copiarFiscal({ data: { origem_id: origemId, destino_ids: Array.from(destinoIds) } }),
+    onSuccess: (res) => {
+      toast.success(`Classificação fiscal aplicada em ${res.updated} produto(s).`);
+      setCopiarOpen(false);
+      setOrigemId(""); setOrigemSearch(""); setDestinoIds(new Set()); setDestinoSearch(""); setDestinoCategoria("TODAS"); setDestinoPage(0);
+      qc.invalidateQueries({ queryKey: ["products"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const [ibsGlobalOpen, setIbsGlobalOpen] = useState(false);
   const [ibsGlobalSituacao, setIbsGlobalSituacao] = useState(IBS_CBS_DEFAULTS.situacao);
@@ -197,9 +264,12 @@ function ProdutosPage() {
     setOpen(true);
   };
 
-  const handleExportCsv = () => {
-    if (products.length === 0) return toast.error("Nenhum produto para exportar.");
-    const wsData = (products as Product[]).map((p) => {
+  const handleExportCsv = async () => {
+    toast.info("Preparando exportação...");
+    const all = await list({ data: { page: 0, pageSize: 10000 } });
+    const allProducts = all.data as Product[];
+    if (allProducts.length === 0) return toast.error("Nenhum produto para exportar.");
+    const wsData = allProducts.map((p) => {
       const row = new Array(25).fill(null);
       row[3]  = p.sku ?? "";
       row[8]  = p.name;
@@ -237,9 +307,9 @@ function ProdutosPage() {
     const ws = XLSX.utils.aoa_to_sheet([header, ...wsData]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Produtos");
-    const data = new Date().toISOString().split("T")[0];
-    XLSX.writeFile(wb, `produtos_backup_${data}.xlsx`);
-    toast.success(`${products.length} produtos exportados!`);
+    const dateStr = new Date().toISOString().split("T")[0];
+    XLSX.writeFile(wb, `produtos_backup_${dateStr}.xlsx`);
+    toast.success(`${allProducts.length} produtos exportados!`);
   };
 
   const processXlsx = async (file: File, lote: string) => {
@@ -348,25 +418,10 @@ function ProdutosPage() {
 
   const handleXlsxClick = () => xlsxRef.current?.click();
 
-  const categorias = [...new Set(products.map((p) => (p as any).category ?? "Sem Categoria"))].sort() as string[];
-  const lotes = [...new Set(products.map((p) => (p as any).lote).filter(Boolean))].sort() as string[];
-
+  // Subcategorias da categoria selecionada — baseado na página atual (aproximação aceitável)
   const subcategoriasDaCategoria = [...new Set(
-    (products as Product[])
-      .filter((p) => p.category === categoriaFinal)
-      .map((p) => p.subcategory)
-      .filter(Boolean)
+    products.filter((p) => p.category === categoriaFinal).map((p) => p.subcategory).filter(Boolean)
   )].sort() as string[];
-
-  const filtered = products.filter((p: any) => {
-    const matchSearch =
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      (p.sku ?? "").toLowerCase().includes(search.toLowerCase());
-    const matchCategoria = categoriaFiltro === "TODAS" ||
-      (categoriaFiltro === "Sem Categoria" ? (!p.category || p.category === "Sem Categoria") : p.category === categoriaFiltro);
-    const matchLote = loteFiltro === "TODOS" || p.lote === loteFiltro;
-    return matchSearch && matchCategoria && matchLote;
-  });
 
   return (
     <div className="space-y-4">
@@ -379,14 +434,154 @@ function ProdutosPage() {
             Cadastro simples para uso no PDV.{" "}
             {!isLoading && (
               <span className="font-medium text-foreground">
-                {filtered.length !== products.length
-                  ? `${filtered.length} de ${products.length} produtos`
-                  : `${products.length} produto${products.length !== 1 ? "s" : ""}`}
+                {totalProducts} produto{totalProducts !== 1 ? "s" : ""}
               </span>
             )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {/* Dialog: Copiar Classificação Fiscal */}
+          <Dialog open={copiarOpen} onOpenChange={(v) => {
+            setCopiarOpen(v);
+            if (!v) { setOrigemId(""); setOrigemSearch(""); setDestinoIds(new Set()); setDestinoSearch(""); setDestinoCategoria("TODAS"); setDestinoPage(0); }
+          }}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Copy className="h-4 w-4 mr-1" /> Copiar Classificação Fiscal
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Copiar classificação fiscal</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-1">
+                {/* Origem */}
+                <div>
+                  <Label className="mb-1 block">Produto origem <span className="text-muted-foreground font-normal">(tem a classificação a copiar)</span></Label>
+                  <Input
+                    placeholder="Buscar por nome ou SKU..."
+                    value={origemSearch}
+                    onChange={(e) => { setOrigemSearch(e.target.value); setOrigemId(""); }}
+                  />
+                  {origemSearch.length >= 1 && !origemId && (
+                    origemOptions.length > 0 ? (
+                      <div className="border rounded-md mt-1 divide-y max-h-48 overflow-y-auto">
+                        {origemOptions.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-muted/60 transition-colors"
+                            onClick={() => { setOrigemId(p.id); setOrigemSearch(`${p.name}${p.sku ? ` (${p.sku})` : ""}`); }}
+                          >
+                            <span className="font-medium">{p.name}</span>
+                            {p.sku && <span className="text-muted-foreground ml-1">· {p.sku}</span>}
+                            <span className="text-muted-foreground ml-1">· NCM: {p.ncm}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-1">Nenhum produto com NCM preenchido encontrado.</p>
+                    )
+                  )}
+                </div>
+
+                {/* Preview dos campos fiscais do origem */}
+                {origemId && (() => {
+                  const orig = origemOptions.find((p) => p.id === origemId) ?? products.find((p) => p.id === origemId);
+                  if (!orig) return null;
+                  const campos = [
+                    ["NCM", orig.ncm],
+                    ["CFOP", orig.cfop],
+                    ["Origem ICMS", orig.icms_origem],
+                    ["Sit. Tributária ICMS", orig.icms_situacao_tributaria],
+                    ["Sit. Tributária IBS/CBS", orig.ibs_cbs_situacao_tributaria],
+                    ["Classificação IBS/CBS", orig.ibs_cbs_classificacao_tributaria],
+                    ["Alíquota CBS", orig.cbs_aliquota != null ? String(orig.cbs_aliquota) : null],
+                    ["Alíquota IBS", orig.ibs_aliquota_total != null ? String(orig.ibs_aliquota_total) : null],
+                  ].filter(([, v]) => v);
+                  return (
+                    <div className="rounded-md bg-muted/40 border p-3 text-sm space-y-1">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Campos que serão copiados</p>
+                      {campos.map(([label, val]) => (
+                        <div key={label} className="flex justify-between gap-2">
+                          <span className="text-muted-foreground">{label}</span>
+                          <span className="font-medium tabular-nums">{val}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                {/* Destinos */}
+                <div>
+                  <Label className="mb-1 block">Produtos destino <span className="text-muted-foreground font-normal">({destinoIds.size} selecionado{destinoIds.size !== 1 ? "s" : ""})</span></Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Filtrar por nome..."
+                      value={destinoSearch}
+                      onChange={(e) => setDestinoSearch(e.target.value)}
+                      className="flex-1"
+                    />
+                    <select
+                      value={destinoCategoria}
+                      onChange={(e) => setDestinoCategoria(e.target.value)}
+                      className="border rounded-md px-3 py-2 text-sm bg-background"
+                    >
+                      <option value="TODAS">Todas</option>
+                      {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="border rounded-md mt-1 divide-y max-h-64 overflow-y-auto">
+                    {destinoList.filter((p) => p.id !== origemId).length === 0 ? (
+                      <p className="text-xs text-muted-foreground p-3">Nenhum produto encontrado.</p>
+                    ) : (
+                      destinoList.filter((p) => p.id !== origemId).map((p) => (
+                        <label key={p.id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/40 text-sm">
+                          <Checkbox
+                            checked={destinoIds.has(p.id)}
+                            onCheckedChange={(checked) => {
+                              setDestinoIds((prev) => {
+                                const next = new Set(prev);
+                                checked ? next.add(p.id) : next.delete(p.id);
+                                return next;
+                              });
+                            }}
+                          />
+                          <span className="flex-1 font-medium">{p.name}</span>
+                          {p.category && <span className="text-muted-foreground text-xs">{p.category}</span>}
+                        </label>
+                      ))
+                    )}
+                  </div>
+                  {destinoTotalPages > 1 && (
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs text-muted-foreground">
+                        Pág. {destinoPage + 1}/{destinoTotalPages} · {destinoTotal} produtos
+                      </span>
+                      <div className="flex gap-1">
+                        <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => setDestinoPage((p) => p - 1)} disabled={destinoPage === 0}>
+                          <ChevronLeft className="h-3 w-3" />
+                        </Button>
+                        <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => setDestinoPage((p) => p + 1)} disabled={destinoPage >= destinoTotalPages - 1}>
+                          <ChevronRight className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setCopiarOpen(false)}>Cancelar</Button>
+                <Button
+                  onClick={() => copiarMut.mutate()}
+                  disabled={!origemId || destinoIds.size === 0 || copiarMut.isPending}
+                >
+                  {copiarMut.isPending ? "Aplicando..." : `Aplicar em ${destinoIds.size} produto${destinoIds.size !== 1 ? "s" : ""}`}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={ibsGlobalOpen} onOpenChange={setIbsGlobalOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
@@ -449,7 +644,7 @@ function ProdutosPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-          <Button variant="outline" onClick={handleExportCsv} disabled={products.length === 0}>
+          <Button variant="outline" onClick={handleExportCsv} disabled={totalProducts === 0}>
             <Download className="h-4 w-4 mr-1" /> Exportar CSV
           </Button>
           <input ref={xlsxRef} type="file"
@@ -664,23 +859,23 @@ function ProdutosPage() {
         <div className="flex flex-wrap gap-3 mb-3">
           <Input
             placeholder="Buscar por nome ou código..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchDraft}
+            onChange={(e) => setSearchDraft(e.target.value)}
             className="max-w-sm"
           />
-          <select value={categoriaFiltro} onChange={(e) => setCategoriaFiltro(e.target.value)}
+          <select value={categoriaFiltro} onChange={(e) => { setCategoriaFiltro(e.target.value); setPage(0); }}
             className="border rounded-md px-3 py-2 text-sm bg-background">
             <option value="TODAS">Todas as categorias ({categorias.length})</option>
             {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
-          <select value={loteFiltro} onChange={(e) => setLoteFiltro(e.target.value)}
+          <select value={loteFiltro} onChange={(e) => { setLoteFiltro(e.target.value); setPage(0); }}
             className="border rounded-md px-3 py-2 text-sm bg-background">
             <option value="TODOS">Todos os lotes ({lotes.length})</option>
             {lotes.map((l) => <option key={l} value={l}>{l}</option>)}
           </select>
-          {(categoriaFiltro !== "TODAS" || loteFiltro !== "TODOS") && (
+          {(searchDraft || categoriaFiltro !== "TODAS" || loteFiltro !== "TODOS") && (
             <Button variant="ghost" size="sm"
-              onClick={() => { setCategoriaFiltro("TODAS"); setLoteFiltro("TODOS"); }}
+              onClick={() => { setSearchDraft(""); setSearch(""); setCategoriaFiltro("TODAS"); setLoteFiltro("TODOS"); setPage(0); }}
               className="text-muted-foreground">
               Limpar filtros ×
             </Button>
@@ -709,12 +904,12 @@ function ProdutosPage() {
                   <TableCell colSpan={10} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
                 </TableRow>
               )}
-              {!isLoading && filtered.length === 0 && (
+              {!isLoading && products.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={10} className="text-center text-muted-foreground py-8">Nenhum produto encontrado.</TableCell>
                 </TableRow>
               )}
-              {filtered.map((p: any) => (
+              {products.map((p: any) => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-1.5">
@@ -763,6 +958,28 @@ function ProdutosPage() {
             </TableBody>
           </Table>
         </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-3">
+            <p className="text-xs text-muted-foreground">
+              Página {page + 1} de {totalPages} · {totalProducts} produto{totalProducts !== 1 ? "s" : ""}
+            </p>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage(0)} disabled={page === 0}>
+                «
+              </Button>
+              <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage((p) => p - 1)} disabled={page === 0}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-xs px-2">{page + 1} / {totalPages}</span>
+              <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage((p) => p + 1)} disabled={page >= totalPages - 1}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1}>
+                »
+              </Button>
+            </div>
+          </div>
+        )}
         <p className="text-xs text-muted-foreground mt-3">
           Planilha XLSX: <code>D</code> (Código ML), <code>I</code> (Descrição), <code>M</code> (Custo), <code>N</code> (Venda), <code>O</code> (Categoria), <code>P</code> (Subcategoria), <code>Q</code> (Lote), <code>R</code> (Cidade/Endereço), <code>S</code> (Data de entrada){" "}
           · Fiscal: <code>T</code> (NCM), <code>U</code> (CFOP), <code>V</code> (Origem ICMS), <code>W</code> (Situação Tributária ICMS){" "}

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
-import { Key, Power, Loader2, Pencil } from "lucide-react";
+import { Key, Power, Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { toggleAtivoUsuario } from "@/lib/usuarios.functions";
+import { toggleAtivoUsuario, excluirUsuario } from "@/lib/usuarios.functions";
 import ModalAlterarSenha from "@/components/modal-alterar-senha";
 import ModalEditarUsuario from "@/components/modal-editar-usuario";
 
@@ -19,10 +19,12 @@ type Profile = {
 interface Props {
   usuario: Profile;
   onUpdate: (atualizado: Profile) => void;
+  onDelete: (id: string) => void;
 }
 
-export default function AcoesUsuario({ usuario, onUpdate }: Props) {
+export default function AcoesUsuario({ usuario, onUpdate, onDelete }: Props) {
   const toggle = useServerFn(toggleAtivoUsuario);
+  const excluir = useServerFn(excluirUsuario);
   const [modalSenha, setModalSenha] = useState(false);
   const [modalEditar, setModalEditar] = useState(false);
 
@@ -30,6 +32,16 @@ export default function AcoesUsuario({ usuario, onUpdate }: Props) {
     mutationFn: async () => {
       await toggle({ data: { id: usuario.id } });
       onUpdate({ ...usuario, ativo: !usuario.ativo });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const excluirMut = useMutation({
+    mutationFn: async () => {
+      if (!confirm(`Excluir o usuário "${usuario.full_name}"? Esta ação não pode ser desfeita.`)) return;
+      await excluir({ data: { id: usuario.id } });
+      onDelete(usuario.id);
+      toast.success("Usuário excluído.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -68,6 +80,15 @@ export default function AcoesUsuario({ usuario, onUpdate }: Props) {
           ) : (
             <Power size={18} />
           )}
+        </button>
+
+        <button
+          onClick={() => excluirMut.mutate()}
+          disabled={excluirMut.isPending}
+          className="p-2 text-red-600 hover:bg-red-500/10 rounded-lg transition-colors flex items-center justify-center w-9 h-9"
+          title="Excluir usuário"
+        >
+          {excluirMut.isPending ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
         </button>
       </div>
 

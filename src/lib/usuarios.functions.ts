@@ -84,8 +84,9 @@ export const editarUsuario = createServerFn({ method: "POST" })
       modulos: modulosValidos.default([]),
     }).parse(d)
   )
-  .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
+  .handler(async ({ data }) => {
+    const admin = getServiceClient();
+    const { error } = await admin
       .from("profiles")
       .update({
         full_name: data.full_name,
@@ -114,6 +115,16 @@ export const toggleAtivoUsuario = createServerFn({ method: "POST" })
       .from("profiles")
       .update({ ativo: !profile.ativo, updated_at: new Date().toISOString() })
       .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const excluirUsuario = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const admin = getServiceClient();
+    const { error } = await admin.auth.admin.deleteUser(data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

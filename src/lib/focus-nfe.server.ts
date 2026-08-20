@@ -207,9 +207,17 @@ export async function emitirNfce(saleId: string, supabase: any): Promise<NfceRes
         nfce_serie: json.serie != null ? String(json.serie) : null,
         nfce_status_sefaz: json.status_sefaz ?? null,
         nfce_mensagem_sefaz: json.mensagem_sefaz ?? null,
-        nfce_danfe_url: json.caminho_danfe ?? null,
-        nfce_qrcode_url: json.qrcode_url ?? null,
-        nfce_xml_url: json.caminho_xml_nota_fiscal ?? null,
+        nfce_danfe_url: json.caminho_danfe
+          ? String(json.caminho_danfe).startsWith("http")
+            ? String(json.caminho_danfe)
+            : `${baseUrl}${json.caminho_danfe}`
+          : null,
+        nfce_qrcode_url: (json.qrcode_url as string | null) ?? null,
+        nfce_xml_url: json.caminho_xml_nota_fiscal
+          ? String(json.caminho_xml_nota_fiscal).startsWith("http")
+            ? String(json.caminho_xml_nota_fiscal)
+            : `${baseUrl}${json.caminho_xml_nota_fiscal}`
+          : null,
         nfce_erro_bruto: null,
       })
       .eq("id", saleId);
@@ -222,9 +230,17 @@ export async function emitirNfce(saleId: string, supabase: any): Promise<NfceRes
       serie: json.serie != null ? String(json.serie) : "",
       status_sefaz: (json.status_sefaz as string) ?? "",
       mensagem_sefaz: (json.mensagem_sefaz as string) ?? "",
-      danfe_url: (json.caminho_danfe as string | null) ?? null,
+      danfe_url: json.caminho_danfe
+        ? String(json.caminho_danfe).startsWith("http")
+          ? String(json.caminho_danfe)
+          : `${baseUrl}${json.caminho_danfe}`
+        : null,
       qrcode_url: (json.qrcode_url as string | null) ?? null,
-      xml_url: (json.caminho_xml_nota_fiscal as string | null) ?? null,
+      xml_url: json.caminho_xml_nota_fiscal
+        ? String(json.caminho_xml_nota_fiscal).startsWith("http")
+          ? String(json.caminho_xml_nota_fiscal)
+          : `${baseUrl}${json.caminho_xml_nota_fiscal}`
+        : null,
     };
   }
 
