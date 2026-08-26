@@ -82,7 +82,7 @@ function PdvPage() {
   const podeDesconto = isManagerOrOwner(profile);
   const isUser = profile?.role === "USER";
 
-  const { data: productsResult } = useQuery({ queryKey: ["products"], queryFn: () => list() });
+  const { data: productsResult } = useQuery({ queryKey: ["products"], queryFn: () => list({ data: { pageSize: 10000 } }) });
   const products = productsResult?.data ?? [];
 
   const [search, setSearch] = useState("");
@@ -213,7 +213,7 @@ function PdvPage() {
   const filtered = useMemo(() => {
     if (search) {
       const s = search.toLowerCase();
-      return products.filter((p) => p.name.toLowerCase().includes(s) || (p.sku ?? "").toLowerCase().includes(s)).slice(0, 100);
+      return products.filter((p) => p.name.toLowerCase().includes(s) || (p.sku ?? "").toLowerCase().includes(s));
     }
     if (categoriaSel) return products.filter((p) => (p as any).category === categoriaSel);
     return [];
