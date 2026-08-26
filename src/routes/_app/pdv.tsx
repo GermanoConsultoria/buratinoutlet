@@ -82,7 +82,8 @@ function PdvPage() {
   const podeDesconto = isManagerOrOwner(profile);
   const isUser = profile?.role === "USER";
 
-  const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => list() });
+  const { data: productsResult } = useQuery({ queryKey: ["products"], queryFn: () => list() });
+  const products = productsResult?.data ?? [];
 
   const [search, setSearch] = useState("");
   const [categoriaSel, setCategoriaSel] = useState<string | null>(null);
